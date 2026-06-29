@@ -506,6 +506,56 @@
     cursor:pointer;white-space:nowrap;flex-shrink:0;
     -webkit-tap-highlight-color:transparent;
   }
+  .order-card{cursor:pointer;}
+  .order-card-meta a{color:var(--muted);text-decoration:none;}
+
+  /* ---- Order detail bottom sheet ---- */
+  .order-detail-overlay{
+    position:fixed;inset:0;
+    background:rgba(28,26,23,0.55);
+    display:none;align-items:flex-end;
+    justify-content:center;z-index:1500;
+  }
+  .order-detail-overlay.show{display:flex;}
+  .order-detail-sheet{
+    background:var(--paper);
+    width:100%;max-width:480px;
+    border-radius:16px 16px 0 0;
+    padding:20px 20px 40px;
+    max-height:85vh;overflow-y:auto;
+  }
+  .order-detail-header{
+    display:flex;justify-content:space-between;align-items:center;
+    margin-bottom:16px;
+  }
+  .order-detail-title{
+    font-family:'Quicksand',sans-serif;
+    font-size:15px;font-weight:700;color:var(--ink);
+  }
+  .order-detail-close{
+    background:none;border:none;font-size:20px;
+    color:var(--muted);cursor:pointer;padding:4px 8px;line-height:1;
+  }
+  .detail-row{margin-bottom:14px;}
+  .detail-label{
+    font-family:'Quicksand',sans-serif;
+    font-size:10px;letter-spacing:0.1em;text-transform:uppercase;
+    color:var(--muted);font-weight:700;margin-bottom:3px;
+  }
+  .detail-value{font-size:14px;font-weight:600;color:var(--ink);line-height:1.5;}
+  .detail-value a{color:var(--rust-deep);text-decoration:none;}
+  .detail-divider{border:none;border-top:1px solid var(--line);margin:16px 0;}
+  .detail-amount-row{
+    display:flex;justify-content:space-between;align-items:baseline;
+    font-size:13px;color:var(--muted);font-weight:600;padding:4px 0;
+  }
+  .detail-grand{
+    display:flex;justify-content:space-between;align-items:baseline;
+    font-size:18px;font-weight:800;color:var(--ink);
+    padding-top:10px;border-top:2px solid var(--ink);margin-top:4px;
+  }
+  .detail-grand .amt{color:var(--rust-deep);}
+
   .orders-empty,.orders-loading{
     text-align:center;color:var(--muted);
     font-size:13px;font-weight:600;padding:32px 0;
@@ -668,6 +718,17 @@
 </div><!-- /#tab-orders -->
 
 </div><!-- /#appContent -->
+
+<!-- ORDER DETAIL OVERLAY -->
+<div id="orderDetailOverlay" class="order-detail-overlay">
+  <div class="order-detail-sheet">
+    <div class="order-detail-header">
+      <div class="order-detail-title">Order Details</div>
+      <button id="closeOrderDetailBtn" class="order-detail-close">&#x2715;</button>
+    </div>
+    <div id="orderDetailContent"></div>
+  </div>
+</div>
 
 <!-- ===================== BILL OVERLAY ===================== -->
 <div id="billOverlay">
@@ -1273,6 +1334,7 @@ document.querySelectorAll('.tab-bar .tab').forEach(btn => {
    ============================================================ */
 let _ordersLoaded = false;
 let _selectedBillNo = null;
+let _ordersCache = [];
 
 function statusBadgeClass(s){
   if(!s) return '';
@@ -1284,17 +1346,19 @@ function statusBadgeClass(s){
 }
 
 function renderOrders(orders){
+  _ordersCache = orders;
   const el = document.getElementById('ordersList');
   if(!orders.length){
     el.innerHTML = '<div class="orders-empty">No orders found.</div>';
     return;
   }
   el.innerHTML = orders.map(o => `
-    <div class="order-card">
+    <div class="order-card" data-billno="${escapeHtml(o.billNo)}">
       <div class="order-card-top">
         <div>
           <div class="order-card-name">${escapeHtml(o.name)}</div>
           <div class="order-card-meta">${escapeHtml(o.billNo)} &middot; ${escapeHtml(String(o.date))}</div>
+          ${o.phone ? `<div class="order-card-meta"><a href="tel:${escapeHtml(o.phone)}" onclick="event.stopPropagation()">${escapeHtml(o.phone)}</a></div>` : ''}
           ${o.generatedBy ? `<div class="order-card-meta">By: ${escapeHtml(o.generatedBy)}</div>` : ''}
         </div>
         <div class="order-card-amount">₹${Number(o.totalAmount).toLocaleString('en-IN')}</div>
@@ -1306,9 +1370,78 @@ function renderOrders(orders){
     </div>
   `).join('');
 
-  el.querySelectorAll('.btn-mark').forEach(btn => {
-    btn.addEventListener('click', () => openStatusPanel(btn.dataset.billno, btn.dataset.status));
+  el.querySelectorAll('.order-card').forEach(card => {
+    card.addEventListener('click', () => openOrderDetail(card.dataset.billno));
   });
+  el.querySelectorAll('.btn-mark').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      openStatusPanel(btn.dataset.billno, btn.dataset.status);
+    });
+  });
+}
+
+function openOrderDetail(billNo){
+  const o = _ordersCache.find(x => String(x.billNo) === String(billNo));
+  if(!o) return;
+
+  const phoneHtml = o.phone
+    ? `<a href="tel:${escapeHtml(o.phone)}">${escapeHtml(o.phone)}</a>` : '—';
+  const emailHtml = o.email
+    ? `<a href="mailto:${escapeHtml(o.email)}">${escapeHtml(o.email)}</a>` : '';
+  const deliveryHtml = o.deliveryCharges && Number(o.deliveryCharges) > 0
+    ? `<div class="detail-amount-row"><span>Delivery</span><span>₹${Number(o.deliveryCharges).toLocaleString('en-IN')}</span></div>` : '';
+  const itemsHtml = o.itemsSummary && String(o.itemsSummary).trim()
+    ? `<div class="detail-row"><div class="detail-label">Items</div><div class="detail-value">${escapeHtml(String(o.itemsSummary))}</div></div>` : '';
+  const dispatchHtml = o.dispatchDate && String(o.dispatchDate).trim()
+    ? `<div class="detail-row"><div class="detail-label">Dispatch Date</div><div class="detail-value">${escapeHtml(String(o.dispatchDate))}</div></div>` : '';
+  const remarksHtml = o.remarks && String(o.remarks).trim()
+    ? `<div class="detail-row"><div class="detail-label">Remarks</div><div class="detail-value">${escapeHtml(String(o.remarks))}</div></div>` : '';
+  const extraSection = dispatchHtml || remarksHtml
+    ? `<hr class="detail-divider">${dispatchHtml}${remarksHtml}` : '';
+
+  document.getElementById('orderDetailContent').innerHTML = `
+    <div style="font-size:12.5px;color:var(--muted);font-weight:600;margin-bottom:16px;">
+      ${escapeHtml(o.billNo)} &middot; ${escapeHtml(String(o.date))}
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">Customer</div>
+      <div class="detail-value">${escapeHtml(o.name)}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">Phone</div>
+      <div class="detail-value">${phoneHtml}</div>
+    </div>
+    ${o.email ? `<div class="detail-row"><div class="detail-label">Email</div><div class="detail-value">${emailHtml}</div></div>` : ''}
+    ${o.address ? `<div class="detail-row"><div class="detail-label">Address</div><div class="detail-value">${escapeHtml(String(o.address))}</div></div>` : ''}
+    <hr class="detail-divider">
+    ${itemsHtml}
+    ${deliveryHtml}
+    <div class="detail-grand">
+      <span>Total</span><span class="amt">₹${Number(o.totalAmount).toLocaleString('en-IN')}</span>
+    </div>
+    ${extraSection}
+    <hr class="detail-divider">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div>
+        <div class="detail-label">Payment Status</div>
+        <span class="status-badge ${statusBadgeClass(o.paymentStatus)}">${escapeHtml(o.paymentStatus||'—')}</span>
+      </div>
+      ${o.generatedBy ? `<div style="font-size:11.5px;color:var(--muted);font-weight:600;">By: ${escapeHtml(o.generatedBy)}</div>` : ''}
+    </div>
+    <button class="btn btn-secondary" id="detailUpdateStatusBtn">Update Status</button>
+  `;
+
+  document.getElementById('detailUpdateStatusBtn').addEventListener('click', () => {
+    closeOrderDetail();
+    openStatusPanel(o.billNo, o.paymentStatus || 'Pending');
+  });
+
+  document.getElementById('orderDetailOverlay').classList.add('show');
+}
+
+function closeOrderDetail(){
+  document.getElementById('orderDetailOverlay').classList.remove('show');
 }
 
 async function loadOrders(search){
@@ -1369,6 +1502,11 @@ document.getElementById('confirmStatusBtn').addEventListener('click', async () =
     btn.disabled = false;
     btn.textContent = 'Save';
   }
+});
+
+document.getElementById('closeOrderDetailBtn').addEventListener('click', closeOrderDetail);
+document.getElementById('orderDetailOverlay').addEventListener('click', e => {
+  if(e.target === document.getElementById('orderDetailOverlay')) closeOrderDetail();
 });
 
 let _searchTimer = null;

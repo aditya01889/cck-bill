@@ -79,8 +79,10 @@ function getOrders(search, limit) {
     var orders = filtered.slice().reverse().slice(0, limit).map(function(r) {
       return {
         billNo: r[0], date: r[1], name: r[2], phone: r[3],
-        totalItems: r[7], totalAmount: r[9],
-        paymentStatus: r[10], generatedBy: r[13]
+        email: r[4], address: r[5], itemsSummary: r[6],
+        totalItems: r[7], deliveryCharges: r[8], totalAmount: r[9],
+        paymentStatus: r[10], dispatchDate: r[11], remarks: r[12],
+        generatedBy: r[13]
       };
     });
 
