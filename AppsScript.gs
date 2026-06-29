@@ -49,7 +49,74 @@ function doPost(e) {
 }
 
 function doGet(e) {
+  var action = (e && e.parameter) ? e.parameter.action : null;
+
+  if (action === 'orders') {
+    return getOrders(e.parameter.search || '', parseInt(e.parameter.limit) || 50);
+  }
+
+  if (action === 'updateStatus') {
+    return updateStatus(e.parameter.billNo || '', e.parameter.status || '');
+  }
+
   return ContentService.createTextOutput('CozyCatKitchen order logger is running.');
+}
+
+function getOrders(search, limit) {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var lastRow = sheet.getLastRow();
+    if (lastRow <= 1) return jsonResponse({ status: 'success', orders: [] });
+
+    var data = sheet.getRange(2, 1, lastRow - 1, 14).getValues();
+    var s = search.toLowerCase();
+    var filtered = s ? data.filter(function(r) {
+      return String(r[0]).toLowerCase().indexOf(s) > -1 ||
+             String(r[2]).toLowerCase().indexOf(s) > -1;
+    }) : data;
+
+    // Most recent first, capped at limit
+    var orders = filtered.slice().reverse().slice(0, limit).map(function(r) {
+      return {
+        billNo: r[0], date: r[1], name: r[2], phone: r[3],
+        totalItems: r[7], totalAmount: r[9],
+        paymentStatus: r[10], generatedBy: r[13]
+      };
+    });
+
+    return jsonResponse({ status: 'success', orders: orders });
+  } catch (err) {
+    return jsonResponse({ status: 'error', message: err.toString() });
+  }
+}
+
+function updateStatus(billNo, status) {
+  var valid = ['Pending', 'Paid', 'Partially Paid', 'Refunded', 'Failed', 'Cancelled'];
+  if (!billNo || valid.indexOf(status) === -1) {
+    return jsonResponse({ status: 'error', message: 'Invalid bill number or status' });
+  }
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var lastRow = sheet.getLastRow();
+    if (lastRow <= 1) return jsonResponse({ status: 'error', message: 'Bill not found' });
+
+    var billNos = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    var rowIndex = -1;
+    for (var i = 0; i < billNos.length; i++) {
+      if (String(billNos[i][0]) === String(billNo)) { rowIndex = i + 2; break; }
+    }
+    if (rowIndex === -1) return jsonResponse({ status: 'error', message: 'Bill not found' });
+
+    sheet.getRange(rowIndex, 11).setValue(status);
+    return jsonResponse({ status: 'success' });
+  } catch (err) {
+    return jsonResponse({ status: 'error', message: err.toString() });
+  }
+}
+
+function jsonResponse(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 /**
