@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>CozyCatKitchen — E-Bill</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -316,6 +317,42 @@
     color:var(--muted);margin-bottom:3px;
     font-weight:700;
   }
+  #billCard .bill-pay{
+    margin-top:18px;
+    padding-top:16px;
+    border-top:1px dashed var(--line);
+    text-align:center;
+  }
+  #billCard .pay-lbl{
+    font-family:'Quicksand',sans-serif;
+    font-size:10px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--rust-deep);
+    font-weight:700;
+    margin-bottom:10px;
+  }
+  #billCard .qr-wrap{
+    display:flex;
+    justify-content:center;
+  }
+  #billCard .qr-wrap canvas, #billCard .qr-wrap img{
+    width:128px !important;
+    height:128px !important;
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:6px;
+    background:#fff;
+    box-sizing:content-box;
+  }
+  #billCard .pay-upi{
+    font-family:'Quicksand',sans-serif;
+    font-size:10.5px;
+    color:var(--muted);
+    margin-top:8px;
+    font-weight:600;
+    letter-spacing:0.02em;
+  }
   #billCard .bill-footer{
     text-align:center;
     margin-top:20px;
@@ -430,6 +467,12 @@
         <div id="bRemarksText"></div>
       </div>
 
+      <div class="bill-pay" id="bPayBox">
+        <div class="pay-lbl">Scan to Pay</div>
+        <div class="qr-wrap"><div id="qrContainer"></div></div>
+        <div class="pay-upi">cozycatkitchen@ptaxis</div>
+      </div>
+
       <div class="bill-footer">Thank you for your order! 🐾</div>
     </div>
   </div>
@@ -449,6 +492,14 @@
    Leave as empty string '' to disable Google Sheets logging.
    ============================================================ */
 const SHEET_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxAiGRuOVaN61HJe8szgTGQlA1iun-mjO-3MmhTYW1Jwnyzfc9ZKAmCR9f281-BrZV2/exec";
+
+/* ============================================================
+   EDIT ZONE 1B — UPI ID FOR PAYMENT QR
+   This is the VPA customers will pay into. The QR generated on
+   each bill includes the bill's exact total amount pre-filled.
+   ============================================================ */
+const UPI_ID = "cozycatkitchen@ptaxis";
+const UPI_PAYEE_NAME = "CozyCatKitchen";
 
 /* ============================================================
    EDIT ZONE 2 — YOUR PRODUCT CATALOG
@@ -657,6 +708,8 @@ document.getElementById('generateBtn').addEventListener('click', () => {
     document.getElementById('bRemarksBox').style.display = 'none';
   }
 
+  generatePaymentQR(totalAmount, billNo);
+
   lastBillFilename = `CCK-${billNo}.png`;
 
   document.getElementById('billOverlay').classList.add('show');
@@ -733,6 +786,33 @@ document.getElementById('shareBtn').addEventListener('click', async () => {
     }
   }
 });
+
+let qrInstance = null;
+
+function generatePaymentQR(amount, billNo){
+  const container = document.getElementById('qrContainer');
+  container.innerHTML = ''; // clear any previous QR before redrawing
+
+  if(!UPI_ID){
+    document.getElementById('bPayBox').style.display = 'none';
+    return;
+  }
+  document.getElementById('bPayBox').style.display = 'block';
+
+  // Build a standard UPI deep link with the amount pre-filled.
+  // tn (transaction note) carries the bill number for easier reconciliation.
+  const formattedAmount = amount.toFixed(2);
+  const upiUrl = `upi://pay?pa=${encodeURIComponent(UPI_ID)}&pn=${encodeURIComponent(UPI_PAYEE_NAME)}&am=${formattedAmount}&cu=INR&tn=${encodeURIComponent('Order ' + billNo)}`;
+
+  qrInstance = new QRCode(container, {
+    text: upiUrl,
+    width: 128,
+    height: 128,
+    colorDark: "#1C1A17",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.M
+  });
+}
 
 function logToSheet(data){
   if(!SHEET_WEBHOOK_URL) return;
