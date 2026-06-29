@@ -556,6 +556,19 @@
   }
   .detail-grand .amt{color:var(--rust-deep);}
 
+  .proof-upload-btn{
+    display:inline-block;
+    font-family:'Quicksand',sans-serif;font-size:12.5px;font-weight:700;
+    padding:9px 14px;border-radius:6px;
+    border:1.5px dashed var(--muted);
+    color:var(--rust-deep);cursor:pointer;
+    background:var(--cream);
+  }
+  .proof-file-name{
+    font-size:12px;color:var(--muted);
+    margin-top:6px;font-weight:600;min-height:16px;
+  }
+
   .orders-empty,.orders-loading{
     text-align:center;color:var(--muted);
     font-size:13px;font-weight:600;padding:32px 0;
@@ -704,6 +717,11 @@
       <option>Failed</option>
       <option>Cancelled</option>
     </select>
+    <div id="proofSection" style="display:none;margin-bottom:12px;">
+      <label class="proof-upload-btn" for="proofFileInput">&#128247; Attach Payment Screenshot</label>
+      <input type="file" id="proofFileInput" accept="image/*" style="display:none;">
+      <div class="proof-file-name" id="proofFileName"></div>
+    </div>
     <div class="status-update-actions">
       <button class="btn btn-primary" id="confirmStatusBtn">Save</button>
       <button class="btn btn-secondary" id="cancelStatusBtn">Cancel</button>
@@ -1429,6 +1447,7 @@ function openOrderDetail(billNo){
       </div>
       ${o.generatedBy ? `<div style="font-size:11.5px;color:var(--muted);font-weight:600;">By: ${escapeHtml(o.generatedBy)}</div>` : ''}
     </div>
+    ${o.paymentProof && String(o.paymentProof).startsWith('https://') ? `<div class="detail-row"><div class="detail-label">Payment Proof</div><div class="detail-value"><a href="${escapeHtml(o.paymentProof)}" target="_blank" rel="noopener">View Screenshot &#x2197;</a></div></div>` : ''}
     <button class="btn btn-secondary" id="detailUpdateStatusBtn">Update Status</button>
   `;
 
@@ -1465,17 +1484,36 @@ async function loadOrders(search){
   }
 }
 
+function toggleProofSection(status){
+  const show = status === 'Paid' || status === 'Partially Paid';
+  document.getElementById('proofSection').style.display = show ? 'block' : 'none';
+}
+
 function openStatusPanel(billNo, currentStatus){
   _selectedBillNo = billNo;
   document.getElementById('updateBillNoLabel').textContent = billNo;
   const sel = document.getElementById('statusSelect');
   sel.value = currentStatus || 'Pending';
+  document.getElementById('proofFileInput').value = '';
+  document.getElementById('proofFileName').textContent = '';
+  toggleProofSection(sel.value);
   document.getElementById('statusUpdatePanel').style.display = 'block';
   document.getElementById('statusUpdatePanel').scrollIntoView({behavior:'smooth', block:'nearest'});
 }
 
+document.getElementById('statusSelect').addEventListener('change', () => {
+  toggleProofSection(document.getElementById('statusSelect').value);
+});
+
+document.getElementById('proofFileInput').addEventListener('change', () => {
+  const f = document.getElementById('proofFileInput').files[0];
+  document.getElementById('proofFileName').textContent = f ? f.name : '';
+});
+
 document.getElementById('cancelStatusBtn').addEventListener('click', () => {
   document.getElementById('statusUpdatePanel').style.display = 'none';
+  document.getElementById('proofFileInput').value = '';
+  document.getElementById('proofFileName').textContent = '';
   _selectedBillNo = null;
 });
 
@@ -1483,6 +1521,7 @@ document.getElementById('confirmStatusBtn').addEventListener('click', async () =
   if(!_selectedBillNo) return;
   const status = document.getElementById('statusSelect').value;
   const btn = document.getElementById('confirmStatusBtn');
+  const proofFile = document.getElementById('proofFileInput').files[0] || null;
   btn.disabled = true;
   btn.textContent = 'Saving…';
   try{
@@ -1490,7 +1529,10 @@ document.getElementById('confirmStatusBtn').addEventListener('click', async () =
     const res = await fetch(url);
     const data = await res.json();
     if(data.status === 'success'){
+      if(proofFile) uploadPaymentProof(_selectedBillNo, proofFile);
       document.getElementById('statusUpdatePanel').style.display = 'none';
+      document.getElementById('proofFileInput').value = '';
+      document.getElementById('proofFileName').textContent = '';
       _selectedBillNo = null;
       loadOrders(document.getElementById('orderSearch').value.trim());
     } else {
@@ -1503,6 +1545,24 @@ document.getElementById('confirmStatusBtn').addEventListener('click', async () =
     btn.textContent = 'Save';
   }
 });
+
+function uploadPaymentProof(billNo, file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    const base64 = reader.result.split(',')[1];
+    fetch(SHEET_WEBHOOK_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      body: JSON.stringify({
+        action: 'uploadProof',
+        billNo: billNo,
+        imageBase64: base64,
+        mimeType: file.type || 'image/jpeg'
+      })
+    }).catch(() => {});
+  };
+  reader.readAsDataURL(file);
+}
 
 document.getElementById('closeOrderDetailBtn').addEventListener('click', closeOrderDetail);
 document.getElementById('orderDetailOverlay').addEventListener('click', e => {
