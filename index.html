@@ -296,13 +296,33 @@
     font-weight:600;
   }
   #billCard td.r{text-align:right;}
+  #billCard .bill-delivery{
+    display:flex;justify-content:space-between;
+    font-size:12.5px;
+    color:var(--muted);
+    font-weight:600;
+    margin-top:8px;
+    padding-top:8px;
+    border-top:1px solid var(--line);
+  }
   #billCard .bill-grand{
     display:flex;justify-content:space-between;
     font-size:17px;font-weight:800;
-    margin-top:14px;padding-top:10px;
+    margin-top:10px;padding-top:10px;
     border-top:2px solid var(--ink);
   }
   #billCard .bill-grand .amt{color:var(--rust-deep);}
+  #billCard .bill-dispatch{
+    margin-top:10px;
+    font-size:12px;
+    color:var(--ink);
+    font-weight:600;
+  }
+  #billCard .bill-dispatch .lbl{
+    font-family:'Quicksand',sans-serif;
+    font-size:10px;letter-spacing:0.08em;text-transform:uppercase;
+    color:var(--rust-deep);font-weight:700;
+  }
   #billCard .bill-remarks{
     margin-top:16px;
     font-size:12.5px;
@@ -409,6 +429,11 @@
   <div class="section-label">Products</div>
   <div id="productList"></div>
 
+  <div class="field" style="margin-top:18px;">
+    <label for="deliveryCharges">Delivery Charges (₹)</label>
+    <input type="number" id="deliveryCharges" inputmode="numeric" min="0" step="1" placeholder="0">
+  </div>
+
   <div class="totals">
     <div class="totals-row">
       <span>Total Items</span>
@@ -417,6 +442,18 @@
     <div class="totals-row grand">
       <span>Total Amount</span>
       <span class="amt">₹<span id="totalAmount">0</span></span>
+    </div>
+  </div>
+
+  <div class="section-label">Dispatch Date</div>
+  <div class="row2">
+    <div class="field">
+      <label for="dispatchFrom">From</label>
+      <input type="date" id="dispatchFrom">
+    </div>
+    <div class="field">
+      <label for="dispatchTo">To</label>
+      <input type="date" id="dispatchTo">
     </div>
   </div>
 
@@ -457,9 +494,18 @@
         <tbody id="billItemsBody"></tbody>
       </table>
 
+      <div class="bill-delivery" id="bDeliveryRow" style="display:none;">
+        <span>Delivery Charges</span>
+        <span>₹<span id="bDeliveryAmt">0</span></span>
+      </div>
+
       <div class="bill-grand">
         <span>Total</span>
         <span class="amt">₹<span id="bGrandTotal">0</span></span>
+      </div>
+
+      <div class="bill-dispatch" id="bDispatchRow" style="display:none;">
+        <span class="lbl">Dispatch Date:</span> <span id="bDispatchDates"></span>
       </div>
 
       <div class="bill-remarks" id="bRemarksBox" style="display:none;">
@@ -621,6 +667,8 @@ function updateTotals(){
     items += quantities[i];
     amount += quantities[i] * p.price;
   });
+  const deliveryCharges = parseFloat(document.getElementById('deliveryCharges').value) || 0;
+  amount += deliveryCharges;
   document.getElementById('totalItems').textContent = items;
   document.getElementById('totalAmount').textContent = amount.toLocaleString('en-IN');
 }
@@ -649,6 +697,9 @@ document.getElementById('generateBtn').addEventListener('click', () => {
   const email = document.getElementById('custEmail').value.trim();
   const address = document.getElementById('custAddress').value.trim();
   const remarks = document.getElementById('remarks').value.trim();
+  const deliveryCharges = parseFloat(document.getElementById('deliveryCharges').value) || 0;
+  const dispatchFromRaw = document.getElementById('dispatchFrom').value;
+  const dispatchToRaw = document.getElementById('dispatchTo').value;
 
   const selected = [];
   PRODUCTS.forEach((p, i) => {
@@ -665,11 +716,17 @@ document.getElementById('generateBtn').addEventListener('click', () => {
     setStatus('Please select at least one product.', 'err');
     return;
   }
+  if(dispatchFromRaw && dispatchToRaw && dispatchToRaw < dispatchFromRaw){
+    setStatus('Dispatch "To" date cannot be before "From" date.', 'err');
+    return;
+  }
 
   const totalItems = selected.reduce((s, p) => s + p.qty, 0);
-  const totalAmount = selected.reduce((s, p) => s + p.lineTotal, 0);
+  const productsTotal = selected.reduce((s, p) => s + p.lineTotal, 0);
+  const grandTotal = productsTotal + deliveryCharges;
   const billNo = genBillNo();
   const dateStr = new Date().toLocaleString('en-IN', { dateStyle:'medium', timeStyle:'short' });
+  const dispatchDateDisplay = formatDispatchRange(dispatchFromRaw, dispatchToRaw);
 
   // Populate bill view
   document.getElementById('bNo').textContent = billNo;
@@ -699,7 +756,23 @@ document.getElementById('generateBtn').addEventListener('click', () => {
   });
   document.getElementById('billItemsBody').innerHTML = rowsHtml;
 
-  document.getElementById('bGrandTotal').textContent = totalAmount.toLocaleString('en-IN');
+  // Delivery charges row — only shown if a non-zero value was entered
+  if(deliveryCharges > 0){
+    document.getElementById('bDeliveryRow').style.display = 'flex';
+    document.getElementById('bDeliveryAmt').textContent = deliveryCharges.toLocaleString('en-IN');
+  } else {
+    document.getElementById('bDeliveryRow').style.display = 'none';
+  }
+
+  document.getElementById('bGrandTotal').textContent = grandTotal.toLocaleString('en-IN');
+
+  // Dispatch date row — only shown if at least one date was entered
+  if(dispatchDateDisplay){
+    document.getElementById('bDispatchRow').style.display = 'block';
+    document.getElementById('bDispatchDates').textContent = dispatchDateDisplay;
+  } else {
+    document.getElementById('bDispatchRow').style.display = 'none';
+  }
 
   if(remarks){
     document.getElementById('bRemarksBox').style.display = 'block';
@@ -708,7 +781,7 @@ document.getElementById('generateBtn').addEventListener('click', () => {
     document.getElementById('bRemarksBox').style.display = 'none';
   }
 
-  generatePaymentQR(totalAmount, billNo);
+  generatePaymentQR(grandTotal, billNo);
 
   lastBillFilename = `CCK-${billNo}.png`;
 
@@ -719,11 +792,26 @@ document.getElementById('generateBtn').addEventListener('click', () => {
   // Log to Google Sheet (fire and forget, non-blocking)
   logToSheet({
     billNo, dateStr, name, phone, email, address,
-    items: selected, totalItems, totalAmount, remarks
+    items: selected, totalItems, totalAmount: grandTotal,
+    deliveryCharges, dispatchDateDisplay, remarks
   });
 
   setStatus('', '');
 });
+
+function formatDispatchRange(fromRaw, toRaw){
+  const fmt = (iso) => {
+    const d = new Date(iso + 'T00:00:00');
+    return d.toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
+  };
+  if(fromRaw && toRaw){
+    if(fromRaw === toRaw) return fmt(fromRaw);
+    return `${fmt(fromRaw)} - ${fmt(toRaw)}`;
+  }
+  if(fromRaw) return fmt(fromRaw);
+  if(toRaw) return fmt(toRaw);
+  return '';
+}
 
 function positionOverlayActions(){
   const overlay = document.getElementById('billOverlay');
@@ -826,6 +914,9 @@ function logToSheet(data){
     remarks: data.remarks,
     totalItems: data.totalItems,
     totalAmount: data.totalAmount,
+    deliveryCharges: data.deliveryCharges || 0,
+    dispatchDate: data.dispatchDateDisplay || '',
+    paymentStatus: 'Pending',
     itemsSummary: data.items.map(i => `${i.category}: ${i.name} x${i.qty} (₹${i.lineTotal})`).join('; ')
   };
   fetch(SHEET_WEBHOOK_URL, {
@@ -841,6 +932,8 @@ function setStatus(msg, type){
   el.textContent = msg;
   el.className = 'status-msg' + (type ? ' ' + type : '');
 }
+
+document.getElementById('deliveryCharges').addEventListener('input', updateTotals);
 
 renderProducts();
 updateTotals();
