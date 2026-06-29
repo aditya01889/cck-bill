@@ -823,6 +823,14 @@ document.getElementById('generateBtn').addEventListener('click', () => {
     setStatus('Please enter customer name.', 'err');
     _reEnableBtn(); return;
   }
+  if(phone && !/^\d{10}$/.test(phone.replace(/[\s\-]/g, ''))){
+    setStatus('Phone number must be 10 digits.', 'err');
+    _reEnableBtn(); return;
+  }
+  if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    setStatus('Please enter a valid email address.', 'err');
+    _reEnableBtn(); return;
+  }
   if(selected.length === 0){
     setStatus('Please select at least one product.', 'err');
     _reEnableBtn(); return;
@@ -1039,7 +1047,9 @@ function logToSheet(data){
     mode: 'no-cors',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(payload)
-  }).catch(() => { /* silent fail, bill still works without logging */ });
+  }).catch(() => {
+    setStatus('Bill generated, but could not reach the order log. Check your internet connection.', 'err');
+  });
 }
 
 function setStatus(msg, type){
