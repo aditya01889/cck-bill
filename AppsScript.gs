@@ -1,0 +1,77 @@
+/**
+ * CozyCatKitchen — Order Logger
+ * --------------------------------
+ * This script receives bill data from the e-bill webpage and
+ * appends each order as a new row in this Google Sheet.
+ *
+ * SETUP: See SETUP_INSTRUCTIONS.md for step-by-step deployment.
+ */
+
+function doPost(e) {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+
+    // Add header row if sheet is empty
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow([
+        'Bill No', 'Date', 'Customer Name', 'Phone', 'Email',
+        'Address', 'Items Summary', 'Total Items', 'Delivery Charges',
+        'Total Amount', 'Payment Status', 'Dispatch Date', 'Remarks'
+      ]);
+    }
+
+    var data = JSON.parse(e.postData.contents);
+
+    sheet.appendRow([
+      data.billNo || '',
+      data.dateStr || '',
+      data.name || '',
+      data.phone || '',
+      data.email || '',
+      data.address || '',
+      data.itemsSummary || '',
+      data.totalItems || 0,
+      data.deliveryCharges || 0,
+      data.totalAmount || 0,
+      data.paymentStatus || 'Pending',
+      data.dispatchDate || '',
+      data.remarks || ''
+    ]);
+
+    return ContentService.createTextOutput(JSON.stringify({ status: 'success' }))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doGet(e) {
+  return ContentService.createTextOutput('CozyCatKitchen order logger is running.');
+}
+
+/**
+ * ONE-TIME SETUP — run this manually once from the Apps Script editor
+ * (select "setupPaymentStatusDropdown" from the function dropdown at the
+ * top, then click Run). This adds a dropdown to the Payment Status column
+ * so you can quickly select a status instead of typing it.
+ *
+ * Safe to re-run any time — it just re-applies the same dropdown rule.
+ */
+function setupPaymentStatusDropdown() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var statusOptions = ['Pending', 'Paid', 'Partially Paid', 'Refunded', 'Failed', 'Cancelled'];
+
+  var rule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(statusOptions, true)
+    .setAllowInvalid(false)
+    .build();
+
+  // Column K = Payment Status (11th column). Applies from row 2 down to
+  // row 1000 so it covers existing + plenty of future orders.
+  var range = sheet.getRange('K2:K1000');
+  range.setDataValidation(rule);
+
+  Logger.log('Payment Status dropdown applied to K2:K1000');
+}

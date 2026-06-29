@@ -1,0 +1,128 @@
+# CozyCatKitchen E-Bill — Setup Guide
+
+You have 2 main files:
+- `index.html` — the actual e-bill page (everything: UI, branding, logic — all in one file)
+- `AppsScript.gs` — code that logs each bill into a Google Sheet
+
+Total cost: ₹0. No signups beyond your existing Google account, GitHub, and Vercel.
+
+---
+
+## What's already set up
+
+- ✅ Live products under Meals / Broths / Treats categories with real prices
+- ✅ CozyCatKitchen logo + matching fonts on the bill
+- ✅ Tap-to-type quantity input (no need to tap + repeatedly)
+- ✅ Delivery Charges field (optional, shown on bill only if non-zero)
+- ✅ Dispatch Date range (From/To, shown on bill only if filled)
+- ✅ UPI QR code on every bill, with the exact amount pre-filled
+- ✅ Google Sheet logging for every generated bill
+- ✅ Hosted live on Vercel via a GitHub repo
+
+This guide is now mainly a reference for future changes — products, Sheet setup, or redeploying.
+
+---
+
+## Updating products or prices
+
+Open `index.html`, find the `CATALOG` array near the top of the `<script>` section:
+
+```js
+const CATALOG = [
+  {
+    category: "Meals (70g)",
+    items: [
+      { name: "Nourish", price: 70 },
+      ...
+    ]
+  },
+  ...
+];
+```
+
+Edit names/prices directly, or add/remove items within a category. To add a whole new category, copy an existing `{ category: "...", items: [...] }` block and edit it.
+
+---
+
+## Google Sheet — column structure
+
+Your Sheet logs these columns, in this order:
+
+| Col | Field |
+|-----|-------|
+| A | Bill No |
+| B | Date |
+| C | Customer Name |
+| D | Phone |
+| E | Email |
+| F | Address |
+| G | Items Summary |
+| H | Total Items |
+| I | Delivery Charges |
+| J | Total Amount |
+| K | Payment Status |
+| L | Dispatch Date |
+| M | Remarks |
+
+Every new bill defaults **Payment Status to "Pending"** — update it manually to `Paid` once you receive payment confirmation from the customer.
+
+### Payment Status dropdown
+
+Column K has a dropdown with these options: `Pending`, `Paid`, `Partially Paid`, `Refunded`, `Failed`, `Cancelled`.
+
+If you ever need to re-apply this (e.g. after restructuring the sheet):
+1. Open **Extensions → Apps Script** on your Sheet
+2. In the toolbar, use the function dropdown (next to the **Run** ▷ button) and select **`setupPaymentStatusDropdown`**
+3. Click **Run** — approve permissions if asked
+4. Column K (rows 2–1000) will now show the dropdown
+
+---
+
+## Re-deploying the Apps Script after code changes
+
+Whenever `AppsScript.gs` content changes:
+
+1. Open **Extensions → Apps Script** on your Sheet
+2. Select all existing code, delete it, paste in the new version
+3. Click **Save** (Ctrl+S)
+4. Click **Deploy → Manage deployments**
+5. Click the **pencil/edit icon** next to your existing deployment
+6. Under "Version," choose **New version**
+7. Click **Deploy**
+
+This keeps the **same Web App URL** — no need to update `SHEET_WEBHOOK_URL` in `index.html` again.
+
+---
+
+## Updating the live site (GitHub → Vercel)
+
+1. Go to your GitHub repo (`aditya01889/cck-bill`)
+2. Open `index.html` → click the **pencil/edit icon**
+3. Replace the content with the updated version, or use **"Upload files"** from the repo's main page to overwrite it directly
+4. Commit the change (commit directly to `main`)
+5. Vercel auto-detects the push and redeploys — your live URL updates automatically within a minute or so
+
+---
+
+## UPI payment QR
+
+Configured in `index.html`:
+
+```js
+const UPI_ID = "cozycatkitchen@ptaxis";
+const UPI_PAYEE_NAME = "CozyCatKitchen";
+```
+
+If your UPI ID ever changes, update it here. Every bill generates a QR with that bill's exact total pre-filled — customers just scan and confirm with their PIN. Payment status still needs manual update in the Sheet (no payment gateway is connected, so there's no automatic confirmation).
+
+---
+
+## Viewing past orders
+
+Open your Google Sheet anytime — every generated bill appears as a new row at the bottom, oldest at top (assuming no manual reordering).
+
+---
+
+## Using the page day-to-day
+
+Just open your live Vercel URL on your or your partner's phone — bookmark it to the home screen for one-tap access. Fill in customer details, tap product counters (or tap the number to type an exact quantity), add delivery charges/dispatch dates/remarks if relevant, then tap **Generate Bill** to get a shareable image with the payment QR included.
