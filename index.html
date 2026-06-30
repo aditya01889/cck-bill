@@ -873,7 +873,7 @@ const CATALOG = [
       { name: "Power",                    price24: 2690, price60: 5750 },
       { name: "Nurture",                  price24: 3050, price60: 6650 },
       { name: "Thrive",                   price24: 3050, price60: 6650 },
-      { name: "Assorted (4 Each/10 Each)", price24: 2690, price60: 5750 }
+      { name: "Assorted (4 Each/10 Each)", name24: "Assorted (4 Each)", name60: "Assorted (10 Each)", price24: 2690, price60: 5750 }
     ]
   },
   {
@@ -913,7 +913,7 @@ const PRODUCTS = [];
 CATALOG.forEach(cat => {
   cat.items.forEach(item => {
     if(cat.comboCategory){
-      PRODUCTS.push({ name: item.name, price24: item.price24, price60: item.price60, isCombo: true, category: cat.category });
+      PRODUCTS.push({ name: item.name, name24: item.name24, name60: item.name60, price24: item.price24, price60: item.price60, isCombo: true, category: cat.category });
     } else {
       PRODUCTS.push({ name: item.name, price: item.price, category: cat.category });
     }
@@ -941,10 +941,11 @@ function renderProducts(){
       cat.items.forEach(item => {
         const i = idx;
         const price = comboPackSize === 24 ? item.price24 : item.price60;
+        const displayName = comboPackSize === 24 ? (item.name24 || item.name) : (item.name60 || item.name);
         html += `
           <div class="product-row ${quantities[i] === 0 ? 'zero' : ''}" data-idx="${i}">
             <div class="p-info">
-              <div class="p-name">${escapeHtml(item.name)}</div>
+              <div class="p-name">${escapeHtml(displayName)}</div>
               <div class="p-price">₹${price.toLocaleString('en-IN')}</div>
             </div>
             <div class="counter">
@@ -1069,7 +1070,8 @@ document.getElementById('generateBtn').addEventListener('click', () => {
     if(quantities[i] > 0){
       const price = p.isCombo ? (comboPackSize === 24 ? p.price24 : p.price60) : p.price;
       const category = p.isCombo ? `${p.category} — Pack of ${comboPackSize}` : p.category;
-      selected.push({ name: p.name, qty: quantities[i], price, lineTotal: price * quantities[i], category });
+      const name = p.isCombo ? (comboPackSize === 24 ? (p.name24 || p.name) : (p.name60 || p.name)) : p.name;
+      selected.push({ name, qty: quantities[i], price, lineTotal: price * quantities[i], category });
     }
   });
 
