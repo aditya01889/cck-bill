@@ -509,6 +509,17 @@
   .order-card{cursor:pointer;}
   .order-card-meta a{color:var(--muted);text-decoration:none;}
 
+  /* ---- Pack size toggle (combo category) ---- */
+  .cat-label-flex{display:flex;justify-content:space-between;align-items:center;}
+  .pack-toggle{display:flex;border:1.5px solid var(--ink);border-radius:6px;overflow:hidden;flex-shrink:0;}
+  .pack-toggle button{
+    font-family:'Quicksand',sans-serif;font-size:11px;font-weight:700;
+    padding:4px 11px;border:none;background:none;color:var(--muted);
+    cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;
+    letter-spacing:0.04em;
+  }
+  .pack-toggle button.active{background:var(--ink);color:#fff;}
+
   /* ---- Order detail bottom sheet ---- */
   .order-detail-overlay{
     position:fixed;inset:0;
@@ -853,6 +864,19 @@ const CATALOG = [
     ]
   },
   {
+    category: "Cozy Meals Combos",
+    comboCategory: true,
+    items: [
+      { name: "Vitality",                 price24: 2330, price60: 4850 },
+      { name: "Nourish",                  price24: 2330, price60: 4850 },
+      { name: "Supreme",                  price24: 2690, price60: 5750 },
+      { name: "Power",                    price24: 2690, price60: 5750 },
+      { name: "Nurture",                  price24: 3050, price60: 6650 },
+      { name: "Thrive",                   price24: 3050, price60: 6650 },
+      { name: "Assorted (4 Each/10 Each)", price24: 2690, price60: 5750 }
+    ]
+  },
+  {
     category: "Treats",
     items: [
       { name: "Cookies 100g", price: 120 },
@@ -888,7 +912,11 @@ const USERS = [
 const PRODUCTS = [];
 CATALOG.forEach(cat => {
   cat.items.forEach(item => {
-    PRODUCTS.push({ name: item.name, price: item.price, category: cat.category });
+    if(cat.comboCategory){
+      PRODUCTS.push({ name: item.name, price24: item.price24, price60: item.price60, isCombo: true, category: cat.category });
+    } else {
+      PRODUCTS.push({ name: item.name, price: item.price, category: cat.category });
+    }
   });
 });
 
@@ -896,34 +924,61 @@ CATALOG.forEach(cat => {
    App logic — no need to edit below this line
    ============================================================ */
 let quantities = PRODUCTS.map(() => 0);
+let comboPackSize = 24;
 
 function renderProducts(){
   const container = document.getElementById('productList');
   let html = '';
   let idx = 0;
   CATALOG.forEach(cat => {
-    html += `<div class="cat-label">${escapeHtml(cat.category)}</div><div class="product-list">`;
-    cat.items.forEach(item => {
-      const i = idx;
-      html += `
-        <div class="product-row ${quantities[i] === 0 ? 'zero' : ''}" data-idx="${i}">
-          <div class="p-info">
-            <div class="p-name">${escapeHtml(item.name)}</div>
-            <div class="p-price">₹${item.price}</div>
-          </div>
-          <div class="counter">
-            <button type="button" data-action="dec" data-idx="${i}">−</button>
-            <input class="qty" type="number" inputmode="numeric" min="0" step="1" value="${quantities[i]}" data-idx="${i}">
-            <button type="button" data-action="inc" data-idx="${i}">+</button>
-          </div>
-        </div>`;
-      idx++;
-    });
+    if(cat.comboCategory){
+      html += `<div class="cat-label cat-label-flex">${escapeHtml(cat.category)}
+        <div class="pack-toggle">
+          <button type="button" data-pack="24" class="${comboPackSize===24?'active':''}">24</button>
+          <button type="button" data-pack="60" class="${comboPackSize===60?'active':''}">60</button>
+        </div>
+      </div><div class="product-list">`;
+      cat.items.forEach(item => {
+        const i = idx;
+        const price = comboPackSize === 24 ? item.price24 : item.price60;
+        html += `
+          <div class="product-row ${quantities[i] === 0 ? 'zero' : ''}" data-idx="${i}">
+            <div class="p-info">
+              <div class="p-name">${escapeHtml(item.name)}</div>
+              <div class="p-price">₹${price.toLocaleString('en-IN')}</div>
+            </div>
+            <div class="counter">
+              <button type="button" data-action="dec" data-idx="${i}">−</button>
+              <input class="qty" type="number" inputmode="numeric" min="0" step="1" value="${quantities[i]}" data-idx="${i}">
+              <button type="button" data-action="inc" data-idx="${i}">+</button>
+            </div>
+          </div>`;
+        idx++;
+      });
+    } else {
+      html += `<div class="cat-label">${escapeHtml(cat.category)}</div><div class="product-list">`;
+      cat.items.forEach(item => {
+        const i = idx;
+        html += `
+          <div class="product-row ${quantities[i] === 0 ? 'zero' : ''}" data-idx="${i}">
+            <div class="p-info">
+              <div class="p-name">${escapeHtml(item.name)}</div>
+              <div class="p-price">₹${item.price}</div>
+            </div>
+            <div class="counter">
+              <button type="button" data-action="dec" data-idx="${i}">−</button>
+              <input class="qty" type="number" inputmode="numeric" min="0" step="1" value="${quantities[i]}" data-idx="${i}">
+              <button type="button" data-action="inc" data-idx="${i}">+</button>
+            </div>
+          </div>`;
+        idx++;
+      });
+    }
     html += `</div>`;
   });
   container.innerHTML = html;
 
-  container.querySelectorAll('button').forEach(btn => {
+  container.querySelectorAll('button[data-action]').forEach(btn => {
     btn.addEventListener('click', () => {
       const i = parseInt(btn.dataset.idx, 10);
       if(btn.dataset.action === 'inc'){
@@ -931,6 +986,14 @@ function renderProducts(){
       } else {
         quantities[i] = Math.max(0, quantities[i] - 1);
       }
+      renderProducts();
+      updateTotals();
+    });
+  });
+
+  container.querySelectorAll('button[data-pack]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      comboPackSize = parseInt(btn.dataset.pack, 10);
       renderProducts();
       updateTotals();
     });
@@ -962,7 +1025,8 @@ function updateTotals(){
   let items = 0, amount = 0;
   PRODUCTS.forEach((p, i) => {
     items += quantities[i];
-    amount += quantities[i] * p.price;
+    const price = p.isCombo ? (comboPackSize === 24 ? p.price24 : p.price60) : p.price;
+    amount += quantities[i] * price;
   });
   const deliveryCharges = parseFloat(document.getElementById('deliveryCharges').value) || 0;
   amount += deliveryCharges;
@@ -1003,7 +1067,9 @@ document.getElementById('generateBtn').addEventListener('click', () => {
   const selected = [];
   PRODUCTS.forEach((p, i) => {
     if(quantities[i] > 0){
-      selected.push({ name: p.name, qty: quantities[i], price: p.price, lineTotal: p.price * quantities[i], category: p.category });
+      const price = p.isCombo ? (comboPackSize === 24 ? p.price24 : p.price60) : p.price;
+      const category = p.isCombo ? `${p.category} — Pack of ${comboPackSize}` : p.category;
+      selected.push({ name: p.name, qty: quantities[i], price, lineTotal: price * quantities[i], category });
     }
   });
 
