@@ -509,12 +509,12 @@
   .order-card{cursor:pointer;}
   .order-card-meta a{color:var(--muted);text-decoration:none;}
 
-  /* ---- Pack size toggle (combo category) ---- */
-  .cat-label-flex{display:flex;justify-content:space-between;align-items:center;}
+  /* ---- Pack size toggle (per combo item) ---- */
+  .p-price-row{display:flex;align-items:center;gap:7px;margin-top:3px;}
   .pack-toggle{display:flex;border:1.5px solid var(--ink);border-radius:6px;overflow:hidden;flex-shrink:0;}
   .pack-toggle button{
-    font-family:'Quicksand',sans-serif;font-size:11px;font-weight:700;
-    padding:4px 11px;border:none;background:none;color:var(--muted);
+    font-family:'Quicksand',sans-serif;font-size:10px;font-weight:700;
+    padding:2px 7px;border:none;background:none;color:var(--muted);
     cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;
     letter-spacing:0.04em;
   }
@@ -924,7 +924,8 @@ CATALOG.forEach(cat => {
    App logic — no need to edit below this line
    ============================================================ */
 let quantities = PRODUCTS.map(() => 0);
-let comboPackSize = 24;
+const comboSizes = {};
+PRODUCTS.forEach((p, i) => { if(p.isCombo) comboSizes[i] = 24; });
 
 function renderProducts(){
   const container = document.getElementById('productList');
@@ -932,21 +933,23 @@ function renderProducts(){
   let idx = 0;
   CATALOG.forEach(cat => {
     if(cat.comboCategory){
-      html += `<div class="cat-label cat-label-flex">${escapeHtml(cat.category)}
-        <div class="pack-toggle">
-          <button type="button" data-pack="24" class="${comboPackSize===24?'active':''}">24</button>
-          <button type="button" data-pack="60" class="${comboPackSize===60?'active':''}">60</button>
-        </div>
-      </div><div class="product-list">`;
+      html += `<div class="cat-label">${escapeHtml(cat.category)}</div><div class="product-list">`;
       cat.items.forEach(item => {
         const i = idx;
-        const price = comboPackSize === 24 ? item.price24 : item.price60;
-        const displayName = comboPackSize === 24 ? (item.name24 || item.name) : (item.name60 || item.name);
+        const sz = comboSizes[i] || 24;
+        const price = sz === 24 ? item.price24 : item.price60;
+        const displayName = sz === 24 ? (item.name24 || item.name) : (item.name60 || item.name);
         html += `
           <div class="product-row ${quantities[i] === 0 ? 'zero' : ''}" data-idx="${i}">
             <div class="p-info">
               <div class="p-name">${escapeHtml(displayName)}</div>
-              <div class="p-price">₹${price.toLocaleString('en-IN')}</div>
+              <div class="p-price-row">
+                <div class="pack-toggle">
+                  <button type="button" data-pack="24" data-idx="${i}" class="${sz===24?'active':''}">24</button>
+                  <button type="button" data-pack="60" data-idx="${i}" class="${sz===60?'active':''}">60</button>
+                </div>
+                <span class="p-price">₹${price.toLocaleString('en-IN')}</span>
+              </div>
             </div>
             <div class="counter">
               <button type="button" data-action="dec" data-idx="${i}">−</button>
@@ -994,7 +997,8 @@ function renderProducts(){
 
   container.querySelectorAll('button[data-pack]').forEach(btn => {
     btn.addEventListener('click', () => {
-      comboPackSize = parseInt(btn.dataset.pack, 10);
+      const i = parseInt(btn.dataset.idx, 10);
+      comboSizes[i] = parseInt(btn.dataset.pack, 10);
       renderProducts();
       updateTotals();
     });
@@ -1026,7 +1030,7 @@ function updateTotals(){
   let items = 0, amount = 0;
   PRODUCTS.forEach((p, i) => {
     items += quantities[i];
-    const price = p.isCombo ? (comboPackSize === 24 ? p.price24 : p.price60) : p.price;
+    const price = p.isCombo ? ((comboSizes[i] || 24) === 24 ? p.price24 : p.price60) : p.price;
     amount += quantities[i] * price;
   });
   const deliveryCharges = parseFloat(document.getElementById('deliveryCharges').value) || 0;
@@ -1068,9 +1072,10 @@ document.getElementById('generateBtn').addEventListener('click', () => {
   const selected = [];
   PRODUCTS.forEach((p, i) => {
     if(quantities[i] > 0){
-      const price = p.isCombo ? (comboPackSize === 24 ? p.price24 : p.price60) : p.price;
-      const category = p.isCombo ? `${p.category} — Pack of ${comboPackSize}` : p.category;
-      const name = p.isCombo ? (comboPackSize === 24 ? (p.name24 || p.name) : (p.name60 || p.name)) : p.name;
+      const sz = p.isCombo ? (comboSizes[i] || 24) : null;
+      const price = p.isCombo ? (sz === 24 ? p.price24 : p.price60) : p.price;
+      const category = p.isCombo ? `${p.category} — Pack of ${sz}` : p.category;
+      const name = p.isCombo ? (sz === 24 ? (p.name24 || p.name) : (p.name60 || p.name)) : p.name;
       selected.push({ name, qty: quantities[i], price, lineTotal: price * quantities[i], category });
     }
   });
