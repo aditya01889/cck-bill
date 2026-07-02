@@ -506,6 +506,70 @@
     cursor:pointer;white-space:nowrap;flex-shrink:0;
     -webkit-tap-highlight-color:transparent;
   }
+  .order-card{cursor:pointer;}
+  .order-card-meta a{color:var(--muted);text-decoration:none;}
+
+
+  /* ---- Order detail bottom sheet ---- */
+  .order-detail-overlay{
+    position:fixed;inset:0;
+    background:rgba(28,26,23,0.55);
+    display:none;align-items:flex-end;
+    justify-content:center;z-index:1500;
+  }
+  .order-detail-overlay.show{display:flex;}
+  .order-detail-sheet{
+    background:var(--paper);
+    width:100%;max-width:480px;
+    border-radius:16px 16px 0 0;
+    padding:20px 20px 40px;
+    max-height:85vh;overflow-y:auto;
+  }
+  .order-detail-header{
+    display:flex;justify-content:space-between;align-items:center;
+    margin-bottom:16px;
+  }
+  .order-detail-title{
+    font-family:'Quicksand',sans-serif;
+    font-size:15px;font-weight:700;color:var(--ink);
+  }
+  .order-detail-close{
+    background:none;border:none;font-size:20px;
+    color:var(--muted);cursor:pointer;padding:4px 8px;line-height:1;
+  }
+  .detail-row{margin-bottom:14px;}
+  .detail-label{
+    font-family:'Quicksand',sans-serif;
+    font-size:10px;letter-spacing:0.1em;text-transform:uppercase;
+    color:var(--muted);font-weight:700;margin-bottom:3px;
+  }
+  .detail-value{font-size:14px;font-weight:600;color:var(--ink);line-height:1.5;}
+  .detail-value a{color:var(--rust-deep);text-decoration:none;}
+  .detail-divider{border:none;border-top:1px solid var(--line);margin:16px 0;}
+  .detail-amount-row{
+    display:flex;justify-content:space-between;align-items:baseline;
+    font-size:13px;color:var(--muted);font-weight:600;padding:4px 0;
+  }
+  .detail-grand{
+    display:flex;justify-content:space-between;align-items:baseline;
+    font-size:18px;font-weight:800;color:var(--ink);
+    padding-top:10px;border-top:2px solid var(--ink);margin-top:4px;
+  }
+  .detail-grand .amt{color:var(--rust-deep);}
+
+  .proof-upload-btn{
+    display:inline-block;
+    font-family:'Quicksand',sans-serif;font-size:12.5px;font-weight:700;
+    padding:9px 14px;border-radius:6px;
+    border:1.5px dashed var(--muted);
+    color:var(--rust-deep);cursor:pointer;
+    background:var(--cream);
+  }
+  .proof-file-name{
+    font-size:12px;color:var(--muted);
+    margin-top:6px;font-weight:600;min-height:16px;
+  }
+
   .orders-empty,.orders-loading{
     text-align:center;color:var(--muted);
     font-size:13px;font-weight:600;padding:32px 0;
@@ -726,6 +790,11 @@
       <option>Failed</option>
       <option>Cancelled</option>
     </select>
+    <div id="proofSection" style="display:none;margin-bottom:12px;">
+      <label class="proof-upload-btn" for="proofFileInput">&#128247; Attach Payment Screenshot</label>
+      <input type="file" id="proofFileInput" accept="image/*" style="display:none;">
+      <div class="proof-file-name" id="proofFileName"></div>
+    </div>
     <div class="status-update-actions">
       <button class="btn btn-primary" id="confirmStatusBtn">Save</button>
       <button class="btn btn-secondary" id="cancelStatusBtn">Cancel</button>
@@ -778,6 +847,17 @@
 </div><!-- /#tab-ingredients -->
 
 </div><!-- /#appContent -->
+
+<!-- ORDER DETAIL OVERLAY -->
+<div id="orderDetailOverlay" class="order-detail-overlay">
+  <div class="order-detail-sheet">
+    <div class="order-detail-header">
+      <div class="order-detail-title">Order Details</div>
+      <button id="closeOrderDetailBtn" class="order-detail-close">&#x2715;</button>
+    </div>
+    <div id="orderDetailContent"></div>
+  </div>
+</div>
 
 <!-- ===================== BILL OVERLAY ===================== -->
 <div id="billOverlay">
@@ -885,6 +965,19 @@ const CATALOG = [
     ]
   },
   {
+    category: "Cozy Meals Combos",
+    comboCategory: true,
+    items: [
+      { name: "Vitality",                 price24: 2330, price60: 4850 },
+      { name: "Nourish",                  price24: 2330, price60: 4850 },
+      { name: "Supreme",                  price24: 2690, price60: 5750 },
+      { name: "Power",                    price24: 2690, price60: 5750 },
+      { name: "Nurture",                  price24: 3050, price60: 6650 },
+      { name: "Thrive",                   price24: 3050, price60: 6650 },
+      { name: "Assorted (4 Each/10 Each)", name24: "Assorted (Pack of 24 / 4 Each)", name60: "Assorted (Pack of 60 / 10 Each)", price24: 2690, price60: 5750 }
+    ]
+  },
+  {
     category: "Treats",
     items: [
       { name: "Cookies 100g", price: 120 },
@@ -916,11 +1009,19 @@ const USERS = [
   { name: "Priyanka",    password: "Admin3001" },
 ];
 
-// Flatten into a single list internally while remembering category boundaries
+// Flatten into a single list internally while remembering category boundaries.
+// Combo items are expanded into two separate rows (Pack of 24 and Pack of 60).
 const PRODUCTS = [];
 CATALOG.forEach(cat => {
   cat.items.forEach(item => {
-    PRODUCTS.push({ name: item.name, price: item.price, category: cat.category });
+    if(cat.comboCategory){
+      const n24 = item.name24 || `${item.name} (Pack of 24)`;
+      const n60 = item.name60 || `${item.name} (Pack of 60)`;
+      PRODUCTS.push({ name: n24, price: item.price24, category: cat.category });
+      PRODUCTS.push({ name: n60, price: item.price60, category: cat.category });
+    } else {
+      PRODUCTS.push({ name: item.name, price: item.price, category: cat.category });
+    }
   });
 });
 
@@ -932,30 +1033,30 @@ let quantities = PRODUCTS.map(() => 0);
 function renderProducts(){
   const container = document.getElementById('productList');
   let html = '';
-  let idx = 0;
-  CATALOG.forEach(cat => {
-    html += `<div class="cat-label">${escapeHtml(cat.category)}</div><div class="product-list">`;
-    cat.items.forEach(item => {
-      const i = idx;
-      html += `
-        <div class="product-row ${quantities[i] === 0 ? 'zero' : ''}" data-idx="${i}">
-          <div class="p-info">
-            <div class="p-name">${escapeHtml(item.name)}</div>
-            <div class="p-price">₹${item.price}</div>
-          </div>
-          <div class="counter">
-            <button type="button" data-action="dec" data-idx="${i}">−</button>
-            <input class="qty" type="number" inputmode="numeric" min="0" step="1" value="${quantities[i]}" data-idx="${i}">
-            <button type="button" data-action="inc" data-idx="${i}">+</button>
-          </div>
-        </div>`;
-      idx++;
-    });
-    html += `</div>`;
+  let lastCat = null;
+  PRODUCTS.forEach((p, i) => {
+    if(p.category !== lastCat){
+      if(lastCat !== null) html += '</div>';
+      html += `<div class="cat-label">${escapeHtml(p.category)}</div><div class="product-list">`;
+      lastCat = p.category;
+    }
+    html += `
+      <div class="product-row ${quantities[i] === 0 ? 'zero' : ''}" data-idx="${i}">
+        <div class="p-info">
+          <div class="p-name">${escapeHtml(p.name)}</div>
+          <div class="p-price">₹${p.price.toLocaleString('en-IN')}</div>
+        </div>
+        <div class="counter">
+          <button type="button" data-action="dec" data-idx="${i}">−</button>
+          <input class="qty" type="number" inputmode="numeric" min="0" step="1" value="${quantities[i]}" data-idx="${i}">
+          <button type="button" data-action="inc" data-idx="${i}">+</button>
+        </div>
+      </div>`;
   });
+  if(lastCat !== null) html += '</div>';
   container.innerHTML = html;
 
-  container.querySelectorAll('button').forEach(btn => {
+  container.querySelectorAll('button[data-action]').forEach(btn => {
     btn.addEventListener('click', () => {
       const i = parseInt(btn.dataset.idx, 10);
       if(btn.dataset.action === 'inc'){
@@ -1387,6 +1488,7 @@ document.querySelectorAll('.tab-bar .tab').forEach(btn => {
    ============================================================ */
 let _ordersLoaded = false;
 let _selectedBillNo = null;
+let _ordersCache = [];
 
 function statusBadgeClass(s){
   if(!s) return '';
@@ -1398,17 +1500,19 @@ function statusBadgeClass(s){
 }
 
 function renderOrders(orders){
+  _ordersCache = orders;
   const el = document.getElementById('ordersList');
   if(!orders.length){
     el.innerHTML = '<div class="orders-empty">No orders found.</div>';
     return;
   }
   el.innerHTML = orders.map(o => `
-    <div class="order-card">
+    <div class="order-card" data-billno="${escapeHtml(o.billNo)}">
       <div class="order-card-top">
         <div>
           <div class="order-card-name">${escapeHtml(o.name)}</div>
           <div class="order-card-meta">${escapeHtml(o.billNo)} &middot; ${escapeHtml(String(o.date))}</div>
+          ${o.phone ? `<div class="order-card-meta"><a href="tel:${escapeHtml(o.phone)}" onclick="event.stopPropagation()">${escapeHtml(o.phone)}</a></div>` : ''}
           ${o.generatedBy ? `<div class="order-card-meta">By: ${escapeHtml(o.generatedBy)}</div>` : ''}
         </div>
         <div class="order-card-amount">₹${Number(o.totalAmount).toLocaleString('en-IN')}</div>
@@ -1420,9 +1524,79 @@ function renderOrders(orders){
     </div>
   `).join('');
 
-  el.querySelectorAll('.btn-mark').forEach(btn => {
-    btn.addEventListener('click', () => openStatusPanel(btn.dataset.billno, btn.dataset.status));
+  el.querySelectorAll('.order-card').forEach(card => {
+    card.addEventListener('click', () => openOrderDetail(card.dataset.billno));
   });
+  el.querySelectorAll('.btn-mark').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      openStatusPanel(btn.dataset.billno, btn.dataset.status);
+    });
+  });
+}
+
+function openOrderDetail(billNo){
+  const o = _ordersCache.find(x => String(x.billNo) === String(billNo));
+  if(!o) return;
+
+  const phoneHtml = o.phone
+    ? `<a href="tel:${escapeHtml(o.phone)}">${escapeHtml(o.phone)}</a>` : '—';
+  const emailHtml = o.email
+    ? `<a href="mailto:${escapeHtml(o.email)}">${escapeHtml(o.email)}</a>` : '';
+  const deliveryHtml = o.deliveryCharges && Number(o.deliveryCharges) > 0
+    ? `<div class="detail-amount-row"><span>Delivery</span><span>₹${Number(o.deliveryCharges).toLocaleString('en-IN')}</span></div>` : '';
+  const itemsHtml = o.itemsSummary && String(o.itemsSummary).trim()
+    ? `<div class="detail-row"><div class="detail-label">Items</div><div class="detail-value">${escapeHtml(String(o.itemsSummary))}</div></div>` : '';
+  const dispatchHtml = o.dispatchDate && String(o.dispatchDate).trim()
+    ? `<div class="detail-row"><div class="detail-label">Dispatch Date</div><div class="detail-value">${escapeHtml(String(o.dispatchDate))}</div></div>` : '';
+  const remarksHtml = o.remarks && String(o.remarks).trim()
+    ? `<div class="detail-row"><div class="detail-label">Remarks</div><div class="detail-value">${escapeHtml(String(o.remarks))}</div></div>` : '';
+  const extraSection = dispatchHtml || remarksHtml
+    ? `<hr class="detail-divider">${dispatchHtml}${remarksHtml}` : '';
+
+  document.getElementById('orderDetailContent').innerHTML = `
+    <div style="font-size:12.5px;color:var(--muted);font-weight:600;margin-bottom:16px;">
+      ${escapeHtml(o.billNo)} &middot; ${escapeHtml(String(o.date))}
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">Customer</div>
+      <div class="detail-value">${escapeHtml(o.name)}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">Phone</div>
+      <div class="detail-value">${phoneHtml}</div>
+    </div>
+    ${o.email ? `<div class="detail-row"><div class="detail-label">Email</div><div class="detail-value">${emailHtml}</div></div>` : ''}
+    ${o.address ? `<div class="detail-row"><div class="detail-label">Address</div><div class="detail-value">${escapeHtml(String(o.address))}</div></div>` : ''}
+    <hr class="detail-divider">
+    ${itemsHtml}
+    ${deliveryHtml}
+    <div class="detail-grand">
+      <span>Total</span><span class="amt">₹${Number(o.totalAmount).toLocaleString('en-IN')}</span>
+    </div>
+    ${extraSection}
+    <hr class="detail-divider">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div>
+        <div class="detail-label">Payment Status</div>
+        <span class="status-badge ${statusBadgeClass(o.paymentStatus)}">${escapeHtml(o.paymentStatus||'—')}</span>
+      </div>
+      ${o.generatedBy ? `<div style="font-size:11.5px;color:var(--muted);font-weight:600;">By: ${escapeHtml(o.generatedBy)}</div>` : ''}
+    </div>
+    ${o.paymentProof && String(o.paymentProof).startsWith('https://') ? `<div class="detail-row"><div class="detail-label">Payment Proof</div><div class="detail-value"><a href="${escapeHtml(o.paymentProof)}" target="_blank" rel="noopener">View Screenshot &#x2197;</a></div></div>` : ''}
+    <button class="btn btn-secondary" id="detailUpdateStatusBtn">Update Status</button>
+  `;
+
+  document.getElementById('detailUpdateStatusBtn').addEventListener('click', () => {
+    closeOrderDetail();
+    openStatusPanel(o.billNo, o.paymentStatus || 'Pending');
+  });
+
+  document.getElementById('orderDetailOverlay').classList.add('show');
+}
+
+function closeOrderDetail(){
+  document.getElementById('orderDetailOverlay').classList.remove('show');
 }
 
 async function loadOrders(search){
@@ -1446,17 +1620,36 @@ async function loadOrders(search){
   }
 }
 
+function toggleProofSection(status){
+  const show = status === 'Paid' || status === 'Partially Paid';
+  document.getElementById('proofSection').style.display = show ? 'block' : 'none';
+}
+
 function openStatusPanel(billNo, currentStatus){
   _selectedBillNo = billNo;
   document.getElementById('updateBillNoLabel').textContent = billNo;
   const sel = document.getElementById('statusSelect');
   sel.value = currentStatus || 'Pending';
+  document.getElementById('proofFileInput').value = '';
+  document.getElementById('proofFileName').textContent = '';
+  toggleProofSection(sel.value);
   document.getElementById('statusUpdatePanel').style.display = 'block';
   document.getElementById('statusUpdatePanel').scrollIntoView({behavior:'smooth', block:'nearest'});
 }
 
+document.getElementById('statusSelect').addEventListener('change', () => {
+  toggleProofSection(document.getElementById('statusSelect').value);
+});
+
+document.getElementById('proofFileInput').addEventListener('change', () => {
+  const f = document.getElementById('proofFileInput').files[0];
+  document.getElementById('proofFileName').textContent = f ? f.name : '';
+});
+
 document.getElementById('cancelStatusBtn').addEventListener('click', () => {
   document.getElementById('statusUpdatePanel').style.display = 'none';
+  document.getElementById('proofFileInput').value = '';
+  document.getElementById('proofFileName').textContent = '';
   _selectedBillNo = null;
 });
 
@@ -1464,6 +1657,7 @@ document.getElementById('confirmStatusBtn').addEventListener('click', async () =
   if(!_selectedBillNo) return;
   const status = document.getElementById('statusSelect').value;
   const btn = document.getElementById('confirmStatusBtn');
+  const proofFile = document.getElementById('proofFileInput').files[0] || null;
   btn.disabled = true;
   btn.textContent = 'Saving…';
   try{
@@ -1471,7 +1665,10 @@ document.getElementById('confirmStatusBtn').addEventListener('click', async () =
     const res = await fetch(url);
     const data = await res.json();
     if(data.status === 'success'){
+      if(proofFile) uploadPaymentProof(_selectedBillNo, proofFile);
       document.getElementById('statusUpdatePanel').style.display = 'none';
+      document.getElementById('proofFileInput').value = '';
+      document.getElementById('proofFileName').textContent = '';
       _selectedBillNo = null;
       loadOrders(document.getElementById('orderSearch').value.trim());
     } else {
@@ -1483,6 +1680,29 @@ document.getElementById('confirmStatusBtn').addEventListener('click', async () =
     btn.disabled = false;
     btn.textContent = 'Save';
   }
+});
+
+function uploadPaymentProof(billNo, file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    const base64 = reader.result.split(',')[1];
+    fetch(SHEET_WEBHOOK_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      body: JSON.stringify({
+        action: 'uploadProof',
+        billNo: billNo,
+        imageBase64: base64,
+        mimeType: file.type || 'image/jpeg'
+      })
+    }).catch(() => {});
+  };
+  reader.readAsDataURL(file);
+}
+
+document.getElementById('closeOrderDetailBtn').addEventListener('click', closeOrderDetail);
+document.getElementById('orderDetailOverlay').addEventListener('click', e => {
+  if(e.target === document.getElementById('orderDetailOverlay')) closeOrderDetail();
 });
 
 let _searchTimer = null;
