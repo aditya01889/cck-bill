@@ -219,7 +219,6 @@
             <div class="step-label">Delivered</div>
           </div>
         </div>
-        <div id="tDispatchDate" style="font-size:12px;color:var(--muted);font-weight:600;margin-top:6px;text-align:center;"></div>
       </div>
 
       <a id="tTrackingLink" href="#" class="track-btn" target="_blank" rel="noopener" style="display:none;">Track Shipment ↗</a>
@@ -316,10 +315,6 @@ function renderOrder(o){
 
   setPaymentBadge(o.paymentStatus);
   setFulfillmentSteps(o.fulfillmentStatus);
-
-  if(o.dispatchDate && String(o.dispatchDate).trim()){
-    document.getElementById('tDispatchDate').textContent = 'Expected: ' + o.dispatchDate;
-  }
 
   const rawLink = String(o.trackingLink || '').trim();
   if(rawLink){
