@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Track Your Order — CozyCatKitchen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#FAF8F3;
+    --ink:#1C1A17;
+    --rust:#C1592E;
+    --rust-deep:#9C4322;
+    --line:#E6E0D4;
+    --muted:#8C8576;
+    --paper:#FFFFFF;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;min-height:100vh;}
+  body{
+    background:var(--cream);
+    color:var(--ink);
+    font-family:'Nunito',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:48px;
+  }
+
+  /* Header */
+  header{
+    padding:24px 16px 20px;
+    text-align:center;
+    border-bottom:1px solid var(--line);
+    background:var(--paper);
+  }
+  .brand{
+    font-family:'Quicksand',sans-serif;
+    font-size:20px;font-weight:700;color:var(--ink);
+    letter-spacing:0.02em;
+  }
+  .brand-sub{
+    font-family:'Quicksand',sans-serif;
+    font-size:10px;letter-spacing:0.2em;text-transform:uppercase;
+    color:var(--muted);margin-top:3px;font-weight:600;
+  }
+
+  /* Wrap */
+  .wrap{max-width:480px;margin:0 auto;padding:0 16px;}
+
+  /* State messages */
+  .state-box{
+    text-align:center;padding:48px 24px;
+    color:var(--muted);font-size:14px;font-weight:600;
+  }
+  .state-box.error{color:var(--rust);}
+
+  /* Card */
+  .card{
+    background:var(--paper);border:1px solid var(--line);
+    border-radius:12px;padding:20px;margin-top:20px;
+  }
+  .card-header{
+    font-family:'Quicksand',sans-serif;
+    font-size:11px;letter-spacing:0.12em;text-transform:uppercase;
+    color:var(--muted);font-weight:700;margin-bottom:4px;
+  }
+  .card-billno{
+    font-size:17px;font-weight:800;color:var(--ink);margin-bottom:2px;
+  }
+  .card-date{font-size:12.5px;color:var(--muted);font-weight:600;}
+  .divider{border:none;border-top:1px solid var(--line);margin:16px 0;}
+
+  /* Detail row */
+  .detail-label{
+    font-family:'Quicksand',sans-serif;
+    font-size:10px;letter-spacing:0.1em;text-transform:uppercase;
+    color:var(--muted);font-weight:700;margin-bottom:3px;
+  }
+  .detail-value{font-size:14px;font-weight:600;color:var(--ink);line-height:1.5;margin-bottom:14px;}
+
+  /* Amount rows */
+  .amount-row{
+    display:flex;justify-content:space-between;align-items:baseline;
+    font-size:13px;color:var(--muted);font-weight:600;padding:3px 0;
+  }
+  .amount-grand{
+    display:flex;justify-content:space-between;align-items:baseline;
+    font-size:17px;font-weight:800;color:var(--ink);
+    padding-top:10px;border-top:2px solid var(--ink);margin-top:4px;
+  }
+  .amount-grand .amt{color:var(--rust-deep);}
+
+  /* Status badge */
+  .status-badge{
+    display:inline-block;
+    font-family:'Quicksand',sans-serif;font-size:11px;font-weight:700;
+    letter-spacing:0.06em;text-transform:uppercase;
+    padding:4px 10px;border-radius:20px;
+    background:var(--cream);color:var(--muted);border:1px solid var(--line);
+  }
+  .status-badge.paid{background:#E8F5EE;color:#3D7A4D;border-color:#B8DEC7;}
+  .status-badge.pending{background:#FFF8EC;color:#9C7A2E;border-color:#F0DC9A;}
+  .status-badge.partial{background:#EEF3FF;color:#3A5BC7;border-color:#B8C8F0;}
+
+  /* Fulfillment steps */
+  .steps{display:flex;align-items:center;gap:0;margin:14px 0 4px;}
+  .step{
+    display:flex;flex-direction:column;align-items:center;
+    flex:1;position:relative;
+  }
+  .step-dot{
+    width:28px;height:28px;border-radius:50%;
+    border:2px solid var(--line);
+    background:var(--cream);
+    display:flex;align-items:center;justify-content:center;
+    font-size:13px;font-weight:700;color:var(--muted);
+    position:relative;z-index:1;
+    transition:all 0.2s;
+  }
+  .step.done .step-dot{
+    background:#E8F5EE;border-color:#3D7A4D;color:#3D7A4D;
+  }
+  .step.active .step-dot{
+    background:var(--rust-deep);border-color:var(--rust-deep);color:#fff;
+  }
+  .step-label{
+    font-family:'Quicksand',sans-serif;
+    font-size:10px;font-weight:700;
+    letter-spacing:0.04em;text-transform:uppercase;
+    color:var(--muted);margin-top:6px;text-align:center;
+  }
+  .step.done .step-label{color:#3D7A4D;}
+  .step.active .step-label{color:var(--rust-deep);}
+  .step-line{
+    position:absolute;top:14px;left:50%;right:-50%;
+    height:2px;background:var(--line);z-index:0;
+  }
+  .step.done .step-line{background:#B8DEC7;}
+  .step:last-child .step-line{display:none;}
+
+  /* Tracking button */
+  .track-btn{
+    display:block;width:100%;
+    background:var(--rust-deep);color:#fff;
+    font-family:'Quicksand',sans-serif;font-size:13px;font-weight:700;
+    letter-spacing:0.06em;text-transform:uppercase;
+    padding:13px;border-radius:8px;text-align:center;
+    text-decoration:none;margin-top:16px;
+    -webkit-tap-highlight-color:transparent;
+  }
+
+  /* Footer */
+  footer{
+    text-align:center;margin-top:32px;
+    font-family:'Quicksand',sans-serif;
+    font-size:11px;color:var(--muted);font-weight:600;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">CozyCatKitchen</div>
+  <div class="brand-sub">Order Tracker</div>
+</header>
+
+<div class="wrap">
+  <div id="stateLoading" class="state-box">Loading your order…</div>
+  <div id="stateError" class="state-box error" style="display:none;"></div>
+  <div id="orderContent" style="display:none;">
+
+    <div class="card">
+      <div class="card-header">Order</div>
+      <div class="card-billno" id="tBillNo"></div>
+      <div class="card-date" id="tDate"></div>
+
+      <hr class="divider">
+
+      <div class="detail-label">Customer</div>
+      <div class="detail-value" id="tName"></div>
+
+      <div class="detail-label">Items</div>
+      <div class="detail-value" id="tItems"></div>
+
+      <div id="tDeliveryRow" class="amount-row" style="display:none;">
+        <span>Delivery</span><span id="tDelivery"></span>
+      </div>
+      <div class="amount-grand">
+        <span>Total</span>
+        <span class="amt" id="tTotal"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="detail-label">Payment</div>
+      <span class="status-badge" id="tPaymentBadge"></span>
+
+      <hr class="divider">
+
+      <div class="detail-label">Fulfillment</div>
+      <div id="tFulfillmentEmpty" style="font-size:13px;color:var(--muted);font-weight:600;margin-top:4px;">Your order is being prepared.</div>
+
+      <div id="tStepsWrap" style="display:none;">
+        <div class="steps">
+          <div class="step" id="stepPacked">
+            <div class="step-line"></div>
+            <div class="step-dot">✓</div>
+            <div class="step-label">Packed</div>
+          </div>
+          <div class="step" id="stepDispatched">
+            <div class="step-line"></div>
+            <div class="step-dot">✓</div>
+            <div class="step-label">Dispatched</div>
+          </div>
+          <div class="step" id="stepDelivered">
+            <div class="step-line"></div>
+            <div class="step-dot">✓</div>
+            <div class="step-label">Delivered</div>
+          </div>
+        </div>
+        <div id="tDispatchDate" style="font-size:12px;color:var(--muted);font-weight:600;margin-top:6px;text-align:center;"></div>
+      </div>
+
+      <a id="tTrackingLink" href="#" class="track-btn" target="_blank" rel="noopener" style="display:none;">Track Shipment ↗</a>
+    </div>
+
+  </div><!-- /#orderContent -->
+</div>
+
+<footer>CozyCatKitchen &mdash; Homemade with love 🐾</footer>
+
+<script>
+const SHEET_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxAiGRuOVaN61HJe8szgTGQlA1iun-mjO-3MmhTYW1Jwnyzfc9ZKAmCR9f281-BrZV2/exec";
+
+function getParam(name){
+  return new URLSearchParams(window.location.search).get(name) || '';
+}
+
+function setPaymentBadge(status){
+  const el = document.getElementById('tPaymentBadge');
+  el.textContent = status || '—';
+  const l = (status || '').toLowerCase();
+  if(l === 'paid') el.classList.add('paid');
+  else if(l === 'pending') el.classList.add('pending');
+  else if(l.startsWith('partial')) el.classList.add('partial');
+}
+
+function setFulfillmentSteps(status){
+  const steps = ['Packed', 'Dispatched', 'Delivered'];
+  const idx = steps.indexOf(status);
+  if(idx === -1){
+    document.getElementById('tFulfillmentEmpty').style.display = '';
+    document.getElementById('tStepsWrap').style.display = 'none';
+    return;
+  }
+  document.getElementById('tFulfillmentEmpty').style.display = 'none';
+  document.getElementById('tStepsWrap').style.display = '';
+  steps.forEach((s, i) => {
+    const el = document.getElementById('step' + s);
+    if(i < idx) el.classList.add('done');
+    else if(i === idx) el.classList.add('active');
+  });
+}
+
+function formatItems(summary){
+  if(!summary) return '—';
+  return summary.split('; ').map(part => {
+    const m = part.match(/^[^:]+:\s*(.+?)\s+x(\d+)\s+\(₹([\d.]+)\)/);
+    if(!m) return part;
+    return `${m[1]} × ${m[2]}`;
+  }).join('\n');
+}
+
+async function loadOrder(){
+  const billNo = getParam('bill');
+  const token = getParam('token');
+  if(!billNo || !token){
+    showError('This link is invalid or incomplete.');
+    return;
+  }
+  if(!SHEET_WEBHOOK_URL){
+    showError('Order tracking is not configured.');
+    return;
+  }
+  try{
+    const url = `${SHEET_WEBHOOK_URL}?action=getOrderByBill&billNo=${encodeURIComponent(billNo)}&token=${encodeURIComponent(token)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if(data.status !== 'success'){
+      showError(data.message === 'Invalid link' ? 'This link is invalid or has expired.' : 'Order not found.');
+      return;
+    }
+    renderOrder(data.order);
+  }catch(e){
+    showError('Could not load your order. Please check your connection and try again.');
+  }
+}
+
+function renderOrder(o){
+  document.getElementById('stateLoading').style.display = 'none';
+  document.getElementById('orderContent').style.display = '';
+
+  document.getElementById('tBillNo').textContent = o.billNo;
+  document.getElementById('tDate').textContent = o.date;
+  document.getElementById('tName').textContent = o.name;
+  document.getElementById('tItems').style.whiteSpace = 'pre-line';
+  document.getElementById('tItems').textContent = formatItems(o.itemsSummary);
+
+  const delivery = Number(o.deliveryCharges) || 0;
+  if(delivery > 0){
+    document.getElementById('tDeliveryRow').style.display = 'flex';
+    document.getElementById('tDelivery').textContent = '₹' + delivery.toLocaleString('en-IN');
+  }
+  document.getElementById('tTotal').textContent = '₹' + Number(o.totalAmount).toLocaleString('en-IN');
+
+  setPaymentBadge(o.paymentStatus);
+  setFulfillmentSteps(o.fulfillmentStatus);
+
+  if(o.dispatchDate && String(o.dispatchDate).trim()){
+    document.getElementById('tDispatchDate').textContent = 'Expected: ' + o.dispatchDate;
+  }
+
+  if(o.trackingLink && String(o.trackingLink).startsWith('http')){
+    const btn = document.getElementById('tTrackingLink');
+    btn.href = o.trackingLink;
+    btn.style.display = '';
+  }
+}
+
+function showError(msg){
+  document.getElementById('stateLoading').style.display = 'none';
+  const el = document.getElementById('stateError');
+  el.textContent = msg;
+  el.style.display = '';
+}
+
+loadOrder();
+</script>
+
+</body>
+</html>

@@ -1221,6 +1221,8 @@ function genBillNo(){
 }
 
 let lastBillFilename = 'CozyCatKitchen-Bill.png';
+let lastBillNo = '';
+let lastShareToken = '';
 
 document.getElementById('generateBtn').addEventListener('click', () => {
   document.getElementById('generateBtn').disabled = true;
@@ -1329,6 +1331,8 @@ document.getElementById('generateBtn').addEventListener('click', () => {
   generatePaymentQR(grandTotal, billNo);
 
   lastBillFilename = `CCK-${billNo}.png`;
+  lastBillNo = billNo;
+  lastShareToken = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
 
   document.getElementById('billOverlay').classList.add('show');
   document.getElementById('overlayActionsWrap').style.display = 'block';
@@ -1340,7 +1344,8 @@ document.getElementById('generateBtn').addEventListener('click', () => {
     items: selected, totalItems, totalAmount: grandTotal,
     deliveryCharges, dispatchDateDisplay, remarks,
     generatedBy: currentUser || '',
-    mapLink, deliveryType
+    mapLink, deliveryType,
+    shareToken: lastShareToken
   });
 
   setStatus('', '');
@@ -1437,10 +1442,16 @@ document.getElementById('shareBtn').addEventListener('click', async () => {
     const file = new File([blob], lastBillFilename, { type: 'image/png' });
 
     if(navigator.canShare && navigator.canShare({ files: [file] })){
+      const trackUrl = lastShareToken
+        ? `${window.location.origin}/track?bill=${encodeURIComponent(lastBillNo)}&token=${encodeURIComponent(lastShareToken)}`
+        : '';
+      const shareText = trackUrl
+        ? `Track your CozyCatKitchen order here:\n${trackUrl}`
+        : 'Here is your order bill from CozyCatKitchen';
       await navigator.share({
         files: [file],
         title: 'CozyCatKitchen Bill',
-        text: 'Here is your order bill from CozyCatKitchen 🐾'
+        text: shareText
       });
       setStatus('Shared successfully.', 'ok');
     } else {
@@ -1502,7 +1513,8 @@ function logToSheet(data){
     itemsSummary: data.items.map(i => `${i.category}: ${i.name} x${i.qty} (₹${i.lineTotal})`).join('; '),
     generatedBy: data.generatedBy || '',
     mapLink: data.mapLink || '',
-    deliveryType: data.deliveryType || ''
+    deliveryType: data.deliveryType || '',
+    shareToken: data.shareToken || ''
   };
   fetch(SHEET_WEBHOOK_URL, {
     method: 'POST',
