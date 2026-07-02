@@ -2048,13 +2048,13 @@ const BILL_TO_INGREDIENT = {
   // Treats
   "Cookies 100g":  [{ product: "Cookies Chicken", mult: 1 }],
   "Cookies 200g":  [{ product: "Cookies Chicken", mult: 2 }],
-  // Cupcakes map directly by name (first word lowercase match attempted below)
-  "Happy Tummy Cupcake (pack of 2)":          [{ product: "Happy Tummy", mult: 2 }],
-  "Purr-fect Protein Cupcake (pack of 2)":    [{ product: "Purr-fect Protein", mult: 2 }],
-  "Veggie Mew Cupcake (pack of 2)":           [{ product: "Veggie Mew", mult: 2 }],
-  "Tuna Delight Cupcake (pack of 2)":         [{ product: "Tuna Delight", mult: 2 }],
-  "Fruity Paws Cupcake (pack of 2)":          [{ product: "Fruity Paws", mult: 2 }],
-  "Golden Glow Cupcake (pack of 2)":          [{ product: "Golden Glow", mult: 2 }],
+  // All cupcake variants share one "Cupcake" recipe in the matrix; 1 pack of 2 = 1 recipe unit
+  "Happy Tummy Cupcake (pack of 2)":          [{ product: "Cupcake", mult: 1 }],
+  "Purr-fect Protein Cupcake (pack of 2)":    [{ product: "Cupcake", mult: 1 }],
+  "Veggie Mew Cupcake (pack of 2)":           [{ product: "Cupcake", mult: 1 }],
+  "Tuna Delight Cupcake (pack of 2)":         [{ product: "Cupcake", mult: 1 }],
+  "Fruity Paws Cupcake (pack of 2)":          [{ product: "Cupcake", mult: 1 }],
+  "Golden Glow Cupcake (pack of 2)":          [{ product: "Cupcake", mult: 1 }],
   // Combos (Pack of 24) — 24 individual meals
   "Nourish (Pack of 24)":   [{ product: "Nourish", mult: 24 }],
   "Vitality (Pack of 24)":  [{ product: "Vitality", mult: 24 }],
