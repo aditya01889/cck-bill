@@ -1641,12 +1641,15 @@ function generatePickupRequest(o, box, chargeWeightKg){
 }
 
 function renderLocalDispatch(container, o){
+  // geo: URI triggers Android's app chooser (Google Maps, Waze, Ola, Uber, etc.)
+  const geoUri = `geo:0,0?q=${encodeURIComponent(o.address)}`;
   container.innerHTML = `
     <div class="dispatch-box">
       <div class="dispatch-box-label">Local Dispatch</div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
         <button class="btn btn-secondary" id="copyForRapidoBtn">Copy Address for Rapido / Porter</button>
-        ${o.mapLink && o.mapLink.startsWith('http') ? `<a href="${escapeHtml(o.mapLink)}" class="btn btn-secondary" style="text-align:center;text-decoration:none;display:block;box-sizing:border-box;">Open Location (choose app)</a>` : ''}
+        <a href="${escapeHtml(geoUri)}" class="btn btn-secondary" style="text-align:center;text-decoration:none;display:block;box-sizing:border-box;">Navigate to Address</a>
+        ${o.mapLink && o.mapLink.startsWith('http') ? `<a href="${escapeHtml(o.mapLink)}" class="btn btn-secondary" style="text-align:center;text-decoration:none;display:block;box-sizing:border-box;font-size:12px;">View on Google Maps</a>` : ''}
       </div>
     </div>
   `;
