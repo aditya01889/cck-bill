@@ -60,3 +60,21 @@ function jsonResponse(obj) {
     .createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
 }
+
+// Run this from the Apps Script editor (not as web app) to see what the sheet contains.
+// Check the Execution Log for output.
+function logMatrixDebug() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Product_ingredient_matrix');
+  if (!sheet) { Logger.log('SHEET NOT FOUND: Product_ingredient_matrix'); return; }
+  var lastRow = sheet.getLastRow();
+  var lastCol = sheet.getLastColumn();
+  Logger.log('Sheet found. Rows: ' + lastRow + ', Cols: ' + lastCol);
+  if (lastRow < 1) { Logger.log('Sheet is empty'); return; }
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  Logger.log('Row 1 headers: ' + JSON.stringify(headers));
+  if (lastRow > 1) {
+    var row2 = sheet.getRange(2, 1, 1, lastCol).getValues()[0];
+    Logger.log('Row 2 values: ' + JSON.stringify(row2));
+  }
+}
