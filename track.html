@@ -321,9 +321,10 @@ function renderOrder(o){
     document.getElementById('tDispatchDate').textContent = 'Expected: ' + o.dispatchDate;
   }
 
-  if(o.trackingLink && String(o.trackingLink).startsWith('http')){
+  const rawLink = String(o.trackingLink || '').trim();
+  if(rawLink){
     const btn = document.getElementById('tTrackingLink');
-    btn.href = o.trackingLink;
+    btn.href = /^https?:\/\//i.test(rawLink) ? rawLink : 'https://' + rawLink;
     btn.style.display = '';
   }
 }

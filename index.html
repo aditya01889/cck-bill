@@ -2290,7 +2290,10 @@ async function loadIngOrders(){
   try {
     const res = await fetch(`${SHEET_WEBHOOK_URL}?action=orders&limit=200`);
     const data = await res.json();
-    _ingOrders = (data.orders || []).filter(o => o.paymentStatus === 'Paid');
+    const packed = new Set(['Packed', 'Dispatched', 'Delivered']);
+    _ingOrders = (data.orders || []).filter(o =>
+      o.paymentStatus === 'Paid' && !packed.has(String(o.fulfillmentStatus || '').trim())
+    );
     // Sort by dispatch date ascending (soonest first), then by bill number
     _ingOrders.sort((a, b) => {
       const da = a.dispatchDate || '';
