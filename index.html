@@ -1861,6 +1861,8 @@ function openOrderDetail(billNo){
     </div>
     ${o.trackingLink && String(o.trackingLink).startsWith('http') ? `<div class="detail-row"><div class="detail-label">Tracking</div><div class="detail-value"><a href="${escapeHtml(String(o.trackingLink))}" target="_blank" rel="noopener">Track Order &#x2197;</a></div></div>` : ''}
     ${o.deliveryType ? `<div class="detail-row"><div class="detail-label">Delivery Type</div><div class="detail-value">${escapeHtml(String(o.deliveryType))}</div></div>` : ''}
+    <hr class="detail-divider">
+    <button class="btn btn-secondary" id="detailShareBillBtn">Share Bill</button>
   `;
 
   document.getElementById('detailUpdateStatusBtn').addEventListener('click', () => {
@@ -1873,11 +1875,111 @@ function openOrderDetail(billNo){
     openFulfillmentPanel(o.billNo);
   });
 
+  document.getElementById('detailShareBillBtn').addEventListener('click', () => reshareOrderBill(o));
+
   document.getElementById('orderDetailOverlay').classList.add('show');
 }
 
 function closeOrderDetail(){
   document.getElementById('orderDetailOverlay').classList.remove('show');
+}
+
+async function reshareOrderBill(o){
+  // Parse itemsSummary: "Category: Name x2 (₹300.00); ..."
+  const items = [];
+  if(o.itemsSummary){
+    String(o.itemsSummary).split('; ').forEach(part => {
+      const m = part.match(/^([^:]+):\s*(.+?)\s+x(\d+)\s+\(₹([\d,.]+)\)/);
+      if(m){
+        const qty = parseInt(m[3]);
+        const lineTotal = parseFloat(String(m[4]).replace(/,/g, ''));
+        items.push({ category: m[1].trim(), name: m[2].trim(), qty, lineTotal });
+      }
+    });
+  }
+
+  const deliveryCharges = Number(o.deliveryCharges) || 0;
+  const grandTotal = Number(o.totalAmount) || 0;
+
+  // Populate bill card elements
+  document.getElementById('bNo').textContent = o.billNo;
+  document.getElementById('bDate').textContent = String(o.date);
+  document.getElementById('bGeneratedBy').textContent = o.generatedBy || '—';
+  document.getElementById('bName').textContent = o.name;
+  document.getElementById('bPhone').textContent = o.phone || '—';
+  document.getElementById('bEmailRow').style.display = o.email ? 'block' : 'none';
+  document.getElementById('bEmail').textContent = o.email || '';
+  document.getElementById('bAddrRow').style.display = o.address ? 'block' : 'none';
+  document.getElementById('bAddress').textContent = String(o.address || '');
+
+  let rowsHtml = '', lastCat = null;
+  items.forEach(p => {
+    if(p.category !== lastCat){
+      rowsHtml += `<tr><td colspan="3" class="cat-header">${escapeHtml(p.category)}</td></tr>`;
+      lastCat = p.category;
+    }
+    rowsHtml += `<tr><td>${escapeHtml(p.name)}</td><td class="r">${p.qty}</td><td class="r">₹${p.lineTotal.toLocaleString('en-IN')}</td></tr>`;
+  });
+  document.getElementById('billItemsBody').innerHTML = rowsHtml;
+
+  if(deliveryCharges > 0){
+    document.getElementById('bDeliveryRow').style.display = 'flex';
+    document.getElementById('bDeliveryAmt').textContent = deliveryCharges.toLocaleString('en-IN');
+  } else {
+    document.getElementById('bDeliveryRow').style.display = 'none';
+  }
+  document.getElementById('bGrandTotal').textContent = grandTotal.toLocaleString('en-IN');
+
+  if(o.dispatchDate && String(o.dispatchDate).trim()){
+    document.getElementById('bDispatchRow').style.display = 'block';
+    document.getElementById('bDispatchDates').textContent = String(o.dispatchDate);
+  } else {
+    document.getElementById('bDispatchRow').style.display = 'none';
+  }
+
+  if(o.remarks && String(o.remarks).trim()){
+    document.getElementById('bRemarksBox').style.display = 'block';
+    document.getElementById('bRemarksText').textContent = String(o.remarks);
+  } else {
+    document.getElementById('bRemarksBox').style.display = 'none';
+  }
+
+  generatePaymentQR(grandTotal, o.billNo);
+
+  // Show overlay for html2canvas (hide action buttons so they don't interfere)
+  const overlay = document.getElementById('billOverlay');
+  const actionsWrap = document.getElementById('overlayActionsWrap');
+  actionsWrap.style.display = 'none';
+  overlay.classList.add('show');
+
+  try{
+    const canvas = await renderBillToCanvas();
+    overlay.classList.remove('show');
+    actionsWrap.style.display = 'block';
+
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    const file = new File([blob], `CCK-${o.billNo}.png`, { type: 'image/png' });
+
+    const trackUrl = o.shareToken && String(o.shareToken).trim()
+      ? `${window.location.origin}/track?bill=${encodeURIComponent(o.billNo)}&token=${encodeURIComponent(String(o.shareToken))}`
+      : '';
+    const shareText = trackUrl
+      ? `Track your CozyCatKitchen order here:\n${trackUrl}`
+      : 'Here is your order bill from CozyCatKitchen';
+
+    if(navigator.canShare && navigator.canShare({ files: [file] })){
+      await navigator.share({ files: [file], title: 'CozyCatKitchen Bill', text: shareText });
+    } else {
+      const link = document.createElement('a');
+      link.download = `CCK-${o.billNo}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+  }catch(e){
+    overlay.classList.remove('show');
+    actionsWrap.style.display = 'block';
+    if(e.name !== 'AbortError') alert('Could not share: ' + e.message);
+  }
 }
 
 async function loadOrders(search){
