@@ -1643,10 +1643,10 @@ function generatePickupRequest(o, box, chargeWeightKg){
 function renderLocalDispatch(container, o){
   container.innerHTML = `
     <div class="dispatch-box">
-      <div class="dispatch-box-label">Local Dispatch — Rapido</div>
+      <div class="dispatch-box-label">Local Dispatch</div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
-        <button class="btn btn-secondary" id="copyForRapidoBtn">Copy Address for Rapido</button>
-        ${o.mapLink && o.mapLink.startsWith('http') ? `<button class="btn btn-secondary" id="openMapsBtn">Open in Maps</button>` : ''}
+        <button class="btn btn-secondary" id="copyForRapidoBtn">Copy Address for Rapido / Porter</button>
+        ${o.mapLink && o.mapLink.startsWith('http') ? `<a href="${escapeHtml(o.mapLink)}" class="btn btn-secondary" style="text-align:center;text-decoration:none;display:block;box-sizing:border-box;">Open Location (choose app)</a>` : ''}
       </div>
     </div>
   `;
@@ -1655,15 +1655,12 @@ function renderLocalDispatch(container, o){
     if(navigator.clipboard){
       navigator.clipboard.writeText(text).then(() => {
         const btn = document.getElementById('copyForRapidoBtn');
-        if(btn){ btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = 'Copy Address for Rapido'; }, 2000); }
+        if(btn){ btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = 'Copy Address for Rapido / Porter'; }, 2000); }
       }).catch(() => alert('Copy manually:\n\n' + text));
     } else {
       alert('Copy manually:\n\n' + text);
     }
   });
-  if(o.mapLink && o.mapLink.startsWith('http')){
-    document.getElementById('openMapsBtn').addEventListener('click', () => { window.open(o.mapLink, '_blank'); });
-  }
 }
 
 function renderNationalDispatch(container, o){
