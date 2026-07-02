@@ -595,6 +595,50 @@
   .status-update-actions{display:flex;gap:8px;}
   .status-update-actions .btn{margin:0;flex:1;}
 
+  /* ---- Fulfillment badges ---- */
+  .fulfillment-badge{
+    display:inline-block;
+    font-family:'Quicksand',sans-serif;font-size:10px;font-weight:700;
+    letter-spacing:0.06em;text-transform:uppercase;
+    padding:2px 7px;border-radius:20px;
+    background:var(--cream);color:var(--muted);border:1px solid var(--line);
+  }
+  .fulfillment-badge.packed{background:#FFF8EC;color:#9C7A2E;border-color:#F0DC9A;}
+  .fulfillment-badge.dispatched{background:#EEF3FF;color:#3A5BC7;border-color:#B8C8F0;}
+  .fulfillment-badge.delivered{background:#E8F5EE;color:#3D7A4D;border-color:#B8DEC7;}
+
+  /* ---- Fulfillment update panel ---- */
+  .fulfillment-panel{
+    background:var(--paper);border:1.5px solid #5B7FD4;
+    border-radius:10px;padding:16px;margin-bottom:16px;
+  }
+  .fulfillment-panel .bill-ref{
+    font-family:'Quicksand',sans-serif;font-size:11px;
+    letter-spacing:0.1em;text-transform:uppercase;
+    color:var(--muted);font-weight:700;margin-bottom:10px;
+  }
+  .fulfillment-panel .bill-ref span{color:var(--ink);font-size:13px;letter-spacing:0;}
+
+  /* ---- Dispatch workflow ---- */
+  .dispatch-box{background:var(--cream);border-radius:8px;padding:14px;margin-top:12px;}
+  .dispatch-box-label{
+    font-family:'Quicksand',sans-serif;font-size:10px;letter-spacing:0.1em;
+    text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:8px;
+  }
+  .dispatch-weight{font-size:12.5px;font-weight:700;color:var(--ink);margin:6px 0 2px;}
+  .dispatch-weight-sub{font-size:11px;color:var(--muted);font-weight:600;margin-bottom:8px;}
+  .pickup-request-text{
+    background:var(--paper);border:1px solid var(--line);border-radius:6px;
+    padding:12px;font-size:11.5px;white-space:pre-wrap;font-family:inherit;
+    color:var(--ink);margin:8px 0;line-height:1.55;
+  }
+  .fulfillment-tracking-input{
+    width:100%;border:1px solid var(--line);background:var(--paper);
+    border-radius:6px;padding:11px 12px;font-size:14px;
+    color:var(--ink);font-family:inherit;margin-bottom:10px;
+  }
+  .fulfillment-tracking-input:focus{outline:none;border-color:#5B7FD4;}
+
   /* ---- Ingredients tab ---- */
   .ing-intro{font-size:13px;color:var(--muted);font-weight:600;margin:0 0 14px;}
   .ing-order-card{
@@ -761,6 +805,21 @@
     </div>
   </div>
 
+  <div class="section-label" style="margin-top:4px;">Delivery Info</div>
+  <div class="row2">
+    <div class="field">
+      <label for="deliveryType">Delivery Type</label>
+      <select id="deliveryType" style="width:100%;border:1px solid var(--line);background:var(--paper);border-radius:6px;padding:11px 12px;font-size:15px;color:var(--ink);font-family:inherit;">
+        <option value="Local">Local (Rapido)</option>
+        <option value="National">National (Courier)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="mapLink">Map Link</label>
+      <input type="url" id="mapLink" placeholder="Google Maps URL (optional)">
+    </div>
+  </div>
+
   <div class="remarks-spacer"></div>
 
   <div class="section-label">Remarks / Notes</div>
@@ -798,6 +857,23 @@
     <div class="status-update-actions">
       <button class="btn btn-primary" id="confirmStatusBtn">Save</button>
       <button class="btn btn-secondary" id="cancelStatusBtn">Cancel</button>
+    </div>
+  </div>
+
+  <div id="fulfillmentPanel" class="fulfillment-panel" style="display:none;">
+    <div class="bill-ref">Fulfillment: <span id="fulfillmentBillLabel"></span></div>
+    <select class="status-select" id="fulfillmentSelect">
+      <option value="Packed">Packed</option>
+      <option value="Dispatched">Dispatched</option>
+      <option value="Delivered">Delivered</option>
+    </select>
+    <div id="trackingLinkField" style="display:none;">
+      <input type="url" id="trackingLinkInput" class="fulfillment-tracking-input" placeholder="Tracking link (optional)">
+    </div>
+    <div id="dispatchWorkflow"></div>
+    <div class="status-update-actions" style="margin-top:10px;">
+      <button class="btn btn-primary" id="confirmFulfillmentBtn">Save</button>
+      <button class="btn btn-secondary" id="cancelFulfillmentBtn">Cancel</button>
     </div>
   </div>
 
@@ -1009,6 +1085,30 @@ const USERS = [
   { name: "Priyanka",    password: "Admin3001" },
 ];
 
+/* ============================================================
+   Fulfillment / Dispatch config
+   ============================================================ */
+const SENDER_NAME = "Cozy Cat Kitchen";
+const SENDER_ADDRESS = "Jaypee Klassic, Sector 134, Noida 201304";
+const BOXES = [
+  { label: "Box 1 (35.5×30.5×26.5 cm)", dims: [35.5, 30.5, 26.5] },
+  { label: "Box 2 (22×26×20 cm)",        dims: [22, 26, 20] },
+];
+const PRODUCT_WEIGHTS = {
+  "Nourish": 70, "Vitality": 70, "Power": 70, "Supreme": 70, "Nurture": 70, "Thrive": 70,
+  "Essence": 100, "Bone Rich": 100,
+  "Cookies 100g": 100, "Cookies 200g": 200,
+  "Happy Tummy Cupcake (pack of 2)": 100, "Purr-fect Protein Cupcake (pack of 2)": 100,
+  "Veggie Mew Cupcake (pack of 2)": 100, "Tuna Delight Cupcake (pack of 2)": 100,
+  "Fruity Paws Cupcake (pack of 2)": 100, "Golden Glow Cupcake (pack of 2)": 100,
+  "Nourish (Pack of 24)": 1680, "Vitality (Pack of 24)": 1680, "Power (Pack of 24)": 1680,
+  "Supreme (Pack of 24)": 1680, "Nurture (Pack of 24)": 1680, "Thrive (Pack of 24)": 1680,
+  "Assorted (Pack of 24 / 4 Each)": 1680,
+  "Nourish (Pack of 60)": 4200, "Vitality (Pack of 60)": 4200, "Power (Pack of 60)": 4200,
+  "Supreme (Pack of 60)": 4200, "Nurture (Pack of 60)": 4200, "Thrive (Pack of 60)": 4200,
+  "Assorted (Pack of 60 / 10 Each)": 4200,
+};
+
 // Flatten into a single list internally while remembering category boundaries.
 // Combo items are expanded into two separate rows (Pack of 24 and Pack of 60).
 const PRODUCTS = [];
@@ -1132,6 +1232,8 @@ document.getElementById('generateBtn').addEventListener('click', () => {
   const deliveryCharges = parseFloat(document.getElementById('deliveryCharges').value) || 0;
   const dispatchFromRaw = document.getElementById('dispatchFrom').value;
   const dispatchToRaw = document.getElementById('dispatchTo').value;
+  const mapLink = document.getElementById('mapLink').value.trim();
+  const deliveryType = document.getElementById('deliveryType').value;
 
   const selected = [];
   PRODUCTS.forEach((p, i) => {
@@ -1237,7 +1339,8 @@ document.getElementById('generateBtn').addEventListener('click', () => {
     billNo, dateStr, name, phone, email, address,
     items: selected, totalItems, totalAmount: grandTotal,
     deliveryCharges, dispatchDateDisplay, remarks,
-    generatedBy: currentUser || ''
+    generatedBy: currentUser || '',
+    mapLink, deliveryType
   });
 
   setStatus('', '');
@@ -1295,8 +1398,9 @@ document.getElementById('newOrderBtn').addEventListener('click', () => {
   document.getElementById('billOverlay').classList.remove('show');
   document.getElementById('generateBtn').disabled = false;
   // Clear customer fields
-  ['custName','custPhone','custEmail','custAddress','remarks','deliveryCharges','dispatchFrom','dispatchTo']
+  ['custName','custPhone','custEmail','custAddress','remarks','deliveryCharges','dispatchFrom','dispatchTo','mapLink']
     .forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('deliveryType').value = 'Local';
   // Reset quantities
   quantities = PRODUCTS.map(() => 0);
   renderProducts();
@@ -1396,7 +1500,9 @@ function logToSheet(data){
     dispatchDate: data.dispatchDateDisplay || '',
     paymentStatus: 'Pending',
     itemsSummary: data.items.map(i => `${i.category}: ${i.name} x${i.qty} (₹${i.lineTotal})`).join('; '),
-    generatedBy: data.generatedBy || ''
+    generatedBy: data.generatedBy || '',
+    mapLink: data.mapLink || '',
+    deliveryType: data.deliveryType || ''
   };
   fetch(SHEET_WEBHOOK_URL, {
     method: 'POST',
@@ -1499,6 +1605,151 @@ function statusBadgeClass(s){
   return '';
 }
 
+function fulfillmentBadgeClass(s){
+  if(!s) return '';
+  const l = s.toLowerCase();
+  if(l === 'packed') return 'packed';
+  if(l === 'dispatched') return 'dispatched';
+  if(l === 'delivered') return 'delivered';
+  return '';
+}
+
+/* ============================================================
+   Fulfillment / Dispatch
+   ============================================================ */
+let _fulfillmentOrder = null;
+
+function calcOrderWeight(itemsSummary){
+  const items = parseItemsSummary(itemsSummary || '');
+  let totalG = 0;
+  items.forEach(({name, qty}) => {
+    const w = PRODUCT_WEIGHTS[name];
+    if(w) totalG += w * qty;
+  });
+  return totalG; // grams
+}
+
+function calcVolumetricWeight(dims){
+  return (dims[0] * dims[1] * dims[2]) / 5000; // kg
+}
+
+function generatePickupRequest(o, box, chargeWeightKg){
+  const today = new Date();
+  const shippingDate = today.toLocaleDateString('en-IN', { day:'numeric', month:'long', year:'numeric' });
+  const dimStr = box.dims.join('×') + ' cm';
+  return `Pickup Request for CozyCatKitchen - \n\nOrder 1 - \n\nName - ${o.name}\nAddress - ${o.address}\nPH: ${o.phone}\nEmail - ${o.email || 'N/A'}\nWeight - ${chargeWeightKg.toFixed(2)} kg approx\nBox Size - ${dimStr}\nProduct Type - Cat Food\nAmount - ${o.totalAmount}\nSender's Name - ${SENDER_NAME}\nSender's Address - ${SENDER_ADDRESS}\nDelivery Type - Air Priority\nShipping Date - ${shippingDate}\n\nItems are frozen and packed with ice gel packs for temperature control. \nHandle with care. \nMake sure to deliver it within 24 hrs.\nLet me know if there are any delays.`;
+}
+
+function renderLocalDispatch(container, o){
+  container.innerHTML = `
+    <div class="dispatch-box">
+      <div class="dispatch-box-label">Local Dispatch — Rapido</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+        <button class="btn btn-secondary" id="copyForRapidoBtn">Copy Address for Rapido</button>
+        ${o.mapLink && o.mapLink.startsWith('http') ? `<button class="btn btn-secondary" id="openMapsBtn">Open in Maps</button>` : ''}
+      </div>
+    </div>
+  `;
+  document.getElementById('copyForRapidoBtn').addEventListener('click', () => {
+    const text = `${o.name}\n${o.phone}\n${o.address}`;
+    if(navigator.clipboard){
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('copyForRapidoBtn');
+        if(btn){ btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = 'Copy Address for Rapido'; }, 2000); }
+      }).catch(() => alert('Copy manually:\n\n' + text));
+    } else {
+      alert('Copy manually:\n\n' + text);
+    }
+  });
+  if(o.mapLink && o.mapLink.startsWith('http')){
+    document.getElementById('openMapsBtn').addEventListener('click', () => { window.open(o.mapLink, '_blank'); });
+  }
+}
+
+function renderNationalDispatch(container, o){
+  const actualWeightG = calcOrderWeight(o.itemsSummary);
+
+  container.innerHTML = `
+    <div class="dispatch-box">
+      <div class="dispatch-box-label">National Dispatch — Courier</div>
+      <div class="field" style="margin-top:8px;margin-bottom:0;">
+        <label style="font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:600;display:block;">Box Size</label>
+        <select id="boxSelect" style="width:100%;border:1px solid var(--line);background:var(--paper);border-radius:6px;padding:11px 12px;font-size:14px;color:var(--ink);font-family:inherit;">
+          ${BOXES.map((b, i) => `<option value="${i}">${escapeHtml(b.label)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="dispatch-weight" id="dispatchWeightLabel"></div>
+      <div class="dispatch-weight-sub" id="dispatchWeightSub"></div>
+      <div class="dispatch-box-label" style="margin-top:4px;">Pickup Request</div>
+      <div class="pickup-request-text" id="pickupRequestText"></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary" id="copyPickupBtn" style="flex:1;">Copy</button>
+        <button class="btn btn-primary" id="whatsappPickupBtn" style="flex:1;">WhatsApp</button>
+      </div>
+    </div>
+  `;
+
+  function updatePickup(){
+    const boxIdx = parseInt(document.getElementById('boxSelect').value) || 0;
+    const box = BOXES[boxIdx];
+    const volKg = calcVolumetricWeight(box.dims);
+    const actualKg = actualWeightG / 1000;
+    const chargeKg = Math.max(actualKg, volKg);
+    document.getElementById('dispatchWeightLabel').textContent = `Charge weight: ${chargeKg.toFixed(2)} kg`;
+    document.getElementById('dispatchWeightSub').textContent = `Actual: ${actualKg.toFixed(2)} kg · Volumetric: ${volKg.toFixed(2)} kg`;
+    document.getElementById('pickupRequestText').textContent = generatePickupRequest(o, box, chargeKg);
+  }
+
+  updatePickup();
+  document.getElementById('boxSelect').addEventListener('change', updatePickup);
+
+  document.getElementById('copyPickupBtn').addEventListener('click', () => {
+    const text = document.getElementById('pickupRequestText').textContent;
+    if(navigator.clipboard){
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('copyPickupBtn');
+        if(btn){ btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = 'Copy'; }, 2000); }
+      }).catch(() => alert('Copy failed.'));
+    } else {
+      alert('Copy manually:\n\n' + text);
+    }
+  });
+
+  document.getElementById('whatsappPickupBtn').addEventListener('click', () => {
+    const text = document.getElementById('pickupRequestText').textContent;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  });
+}
+
+function updateFulfillmentUI(){
+  const status = document.getElementById('fulfillmentSelect').value;
+  const showTracking = status === 'Dispatched' || status === 'Delivered';
+  document.getElementById('trackingLinkField').style.display = showTracking ? 'block' : 'none';
+  const workflow = document.getElementById('dispatchWorkflow');
+  if(status !== 'Dispatched' || !_fulfillmentOrder){
+    workflow.innerHTML = '';
+    return;
+  }
+  const deliveryType = (_fulfillmentOrder.deliveryType || 'Local').trim();
+  if(deliveryType === 'National'){
+    renderNationalDispatch(workflow, _fulfillmentOrder);
+  } else {
+    renderLocalDispatch(workflow, _fulfillmentOrder);
+  }
+}
+
+function openFulfillmentPanel(billNo){
+  _fulfillmentOrder = _ordersCache.find(x => String(x.billNo) === String(billNo));
+  if(!_fulfillmentOrder) return;
+  document.getElementById('fulfillmentBillLabel').textContent = billNo;
+  const sel = document.getElementById('fulfillmentSelect');
+  sel.value = _fulfillmentOrder.fulfillmentStatus || 'Packed';
+  document.getElementById('trackingLinkInput').value = _fulfillmentOrder.trackingLink || '';
+  updateFulfillmentUI();
+  document.getElementById('fulfillmentPanel').style.display = 'block';
+  document.getElementById('fulfillmentPanel').scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
 function renderOrders(orders){
   _ordersCache = orders;
   const el = document.getElementById('ordersList');
@@ -1518,7 +1769,10 @@ function renderOrders(orders){
         <div class="order-card-amount">₹${Number(o.totalAmount).toLocaleString('en-IN')}</div>
       </div>
       <div class="order-card-bottom">
-        <span class="status-badge ${statusBadgeClass(o.paymentStatus)}">${escapeHtml(o.paymentStatus||'—')}</span>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;">
+          <span class="status-badge ${statusBadgeClass(o.paymentStatus)}">${escapeHtml(o.paymentStatus||'—')}</span>
+          ${o.fulfillmentStatus ? `<span class="fulfillment-badge ${fulfillmentBadgeClass(o.fulfillmentStatus)}">${escapeHtml(o.fulfillmentStatus)}</span>` : ''}
+        </div>
         <button class="btn-mark" data-billno="${escapeHtml(o.billNo)}" data-status="${escapeHtml(o.paymentStatus||'Pending')}">Update Status</button>
       </div>
     </div>
@@ -1585,11 +1839,26 @@ function openOrderDetail(billNo){
     </div>
     ${o.paymentProof && String(o.paymentProof).startsWith('https://') ? `<div class="detail-row"><div class="detail-label">Payment Proof</div><div class="detail-value"><a href="${escapeHtml(o.paymentProof)}" target="_blank" rel="noopener">View Screenshot &#x2197;</a></div></div>` : ''}
     <button class="btn btn-secondary" id="detailUpdateStatusBtn">Update Status</button>
+    <hr class="detail-divider">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <div>
+        <div class="detail-label">Fulfillment</div>
+        <span class="fulfillment-badge ${fulfillmentBadgeClass(o.fulfillmentStatus)}">${o.fulfillmentStatus ? escapeHtml(o.fulfillmentStatus) : 'Not set'}</span>
+      </div>
+      <button class="btn-mark" id="detailUpdateFulfillmentBtn">Update Fulfillment</button>
+    </div>
+    ${o.trackingLink && String(o.trackingLink).startsWith('http') ? `<div class="detail-row"><div class="detail-label">Tracking</div><div class="detail-value"><a href="${escapeHtml(String(o.trackingLink))}" target="_blank" rel="noopener">Track Order &#x2197;</a></div></div>` : ''}
+    ${o.deliveryType ? `<div class="detail-row"><div class="detail-label">Delivery Type</div><div class="detail-value">${escapeHtml(String(o.deliveryType))}</div></div>` : ''}
   `;
 
   document.getElementById('detailUpdateStatusBtn').addEventListener('click', () => {
     closeOrderDetail();
     openStatusPanel(o.billNo, o.paymentStatus || 'Pending');
+  });
+
+  document.getElementById('detailUpdateFulfillmentBtn').addEventListener('click', () => {
+    closeOrderDetail();
+    openFulfillmentPanel(o.billNo);
   });
 
   document.getElementById('orderDetailOverlay').classList.add('show');
@@ -1703,6 +1972,41 @@ function uploadPaymentProof(billNo, file){
 document.getElementById('closeOrderDetailBtn').addEventListener('click', closeOrderDetail);
 document.getElementById('orderDetailOverlay').addEventListener('click', e => {
   if(e.target === document.getElementById('orderDetailOverlay')) closeOrderDetail();
+});
+
+document.getElementById('fulfillmentSelect').addEventListener('change', updateFulfillmentUI);
+
+document.getElementById('cancelFulfillmentBtn').addEventListener('click', () => {
+  document.getElementById('fulfillmentPanel').style.display = 'none';
+  document.getElementById('dispatchWorkflow').innerHTML = '';
+  _fulfillmentOrder = null;
+});
+
+document.getElementById('confirmFulfillmentBtn').addEventListener('click', async () => {
+  if(!_fulfillmentOrder) return;
+  const status = document.getElementById('fulfillmentSelect').value;
+  const trackingLink = document.getElementById('trackingLinkInput').value.trim();
+  const btn = document.getElementById('confirmFulfillmentBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  try{
+    const url = `${SHEET_WEBHOOK_URL}?action=updateFulfillment&billNo=${encodeURIComponent(_fulfillmentOrder.billNo)}&fulfillmentStatus=${encodeURIComponent(status)}&trackingLink=${encodeURIComponent(trackingLink)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if(data.status === 'success'){
+      document.getElementById('fulfillmentPanel').style.display = 'none';
+      document.getElementById('dispatchWorkflow').innerHTML = '';
+      _fulfillmentOrder = null;
+      loadOrders(document.getElementById('orderSearch').value.trim());
+    } else {
+      alert('Error: ' + (data.message || 'Could not update fulfillment.'));
+    }
+  }catch(e){
+    alert('Network error — could not update fulfillment.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save';
+  }
 });
 
 let _searchTimer = null;
