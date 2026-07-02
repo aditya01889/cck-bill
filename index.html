@@ -530,6 +530,77 @@
   .status-select:focus{outline:none;border-color:var(--rust);}
   .status-update-actions{display:flex;gap:8px;}
   .status-update-actions .btn{margin:0;flex:1;}
+
+  /* ---- Ingredients tab ---- */
+  .ing-intro{font-size:13px;color:var(--muted);font-weight:600;margin:0 0 14px;}
+  .ing-order-card{
+    background:var(--paper);border:1px solid var(--line);
+    border-radius:8px;padding:12px 14px;margin-bottom:10px;
+    display:flex;align-items:flex-start;gap:12px;cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .ing-order-card input[type="checkbox"]{
+    width:18px;height:18px;flex-shrink:0;margin-top:3px;
+    accent-color:var(--rust-deep);cursor:pointer;
+  }
+  .ing-order-card.ing-selected{border-color:var(--rust-deep);background:#FFF8F5;}
+  .ing-order-info{flex:1;min-width:0;}
+  .ing-order-name{font-size:14.5px;font-weight:700;color:var(--ink);}
+  .ing-order-meta{font-size:11.5px;color:var(--muted);margin-top:2px;font-weight:600;}
+  .ing-order-dispatch{font-size:11.5px;color:var(--rust-deep);font-weight:700;margin-top:3px;}
+  .ing-selected-bar{
+    display:flex;justify-content:space-between;align-items:center;
+    background:var(--cream);border-radius:8px;padding:10px 14px;
+    margin-bottom:14px;border:1px solid var(--line);
+  }
+  .ing-selected-bar span{font-size:13px;font-weight:700;color:var(--ink);}
+  .ing-selected-bar button{
+    font-family:'Quicksand',sans-serif;font-size:11.5px;font-weight:700;
+    background:none;border:1.5px solid var(--muted);border-radius:6px;
+    padding:4px 10px;color:var(--muted);cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .ing-sub-tab-bar{
+    display:flex;border-bottom:2px solid var(--line);margin-bottom:14px;
+  }
+  .ing-sub-tab{
+    flex:1;padding:10px 8px;border:none;background:none;
+    font-family:'Quicksand',sans-serif;font-size:12.5px;font-weight:700;
+    color:var(--muted);cursor:pointer;letter-spacing:0.06em;text-transform:uppercase;
+    border-bottom:2.5px solid transparent;margin-bottom:-2px;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .ing-sub-tab.active{color:var(--rust-deep);border-bottom-color:var(--rust-deep);}
+  .ing-ing-row{
+    display:flex;align-items:center;gap:10px;
+    padding:10px 0;border-bottom:1px solid var(--line);
+  }
+  .ing-ing-row:last-child{border-bottom:none;}
+  .ing-ing-row input[type="checkbox"]{
+    width:16px;height:16px;flex-shrink:0;accent-color:var(--rust-deep);cursor:pointer;
+  }
+  .ing-ing-name{flex:1;font-size:14px;font-weight:600;color:var(--ink);}
+  .ing-ing-qty{font-size:13px;font-weight:700;color:var(--rust-deep);white-space:nowrap;}
+  .ing-ing-box{
+    background:var(--paper);border:1px solid var(--line);
+    border-radius:8px;padding:0 14px;
+  }
+  .ing-radio-row{
+    display:flex;align-items:center;gap:10px;
+    padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer;
+  }
+  .ing-radio-row:last-child{border-bottom:none;}
+  .ing-radio-row input[type="radio"]{width:18px;height:18px;flex-shrink:0;accent-color:var(--rust-deep);}
+  .ing-radio-label{font-size:14px;font-weight:700;color:var(--ink);}
+  .ing-radio-sub{font-size:11.5px;color:var(--muted);font-weight:600;}
+  .ing-making-result{
+    background:var(--paper);border:1px solid var(--line);
+    border-radius:8px;padding:12px 14px;
+  }
+  .ing-making-title{
+    font-family:'Quicksand',sans-serif;font-size:11px;letter-spacing:0.1em;
+    text-transform:uppercase;color:var(--rust-deep);font-weight:700;margin-bottom:10px;
+  }
 </style>
 </head>
 <body>
@@ -569,6 +640,7 @@
 <nav class="tab-bar">
   <button class="tab active" data-tab="newbill" id="tabNewBill">New Bill</button>
   <button class="tab" data-tab="orders" id="tabOrders">Orders</button>
+  <button class="tab" data-tab="ingredients" id="tabIngredients" style="display:none;">Ingredients</button>
 </nav>
 
 <div id="tab-newbill" class="tab-panel active">
@@ -667,6 +739,44 @@
 </div>
 </div><!-- /#tab-orders -->
 
+<div id="tab-ingredients" class="tab-panel">
+<div class="wrap">
+  <div class="section-label" style="margin-top:24px;">Ingredient Calculator</div>
+  <p class="ing-intro">Select one or more paid orders to calculate ingredients.</p>
+
+  <div class="ing-selected-bar" id="ingSelectedBar" style="display:none;">
+    <span id="ingSelectedCount">0 selected</span>
+    <button id="ingClearBtn">Clear all</button>
+  </div>
+
+  <div id="ingOrdersList"><div class="orders-loading">Loading orders…</div></div>
+
+  <div id="ingCalcPanel" style="display:none;margin-top:18px;">
+    <div class="ing-sub-tab-bar">
+      <button class="ing-sub-tab active" data-itab="buying" id="ingSubTabBuying">Buying</button>
+      <button class="ing-sub-tab" data-itab="making" id="ingSubTabMaking">Making</button>
+    </div>
+
+    <div id="ing-itab-buying">
+      <div class="ing-ing-box" id="ingBuyingList"></div>
+      <div style="margin-top:14px;display:flex;gap:10px;">
+        <button class="btn btn-primary" id="ingShareBtn" style="flex:1;">Share via WhatsApp</button>
+      </div>
+    </div>
+
+    <div id="ing-itab-making" style="display:none;">
+      <div class="ing-ing-box" id="ingMakingRadios"></div>
+      <div id="ingMakingResult" style="display:none;margin-top:14px;">
+        <div class="ing-making-result">
+          <div class="ing-making-title" id="ingMakingProductTitle"></div>
+          <div id="ingMakingIngList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div><!-- /#tab-ingredients -->
+
 </div><!-- /#appContent -->
 
 <!-- ===================== BILL OVERLAY ===================== -->
@@ -739,6 +849,7 @@
    Leave as empty string '' to disable Google Sheets logging.
    ============================================================ */
 const SHEET_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxAiGRuOVaN61HJe8szgTGQlA1iun-mjO-3MmhTYW1Jwnyzfc9ZKAmCR9f281-BrZV2/exec";
+const INGREDIENTS_WEBHOOK_URL = ""; // TODO: paste IngredientCalc.gs web app URL here
 
 /* ============================================================
    EDIT ZONE 1B — UPI ID FOR PAYMENT QR
@@ -801,7 +912,8 @@ const CATALOG = [
    employee leaves.
    ============================================================ */
 const USERS = [
-  { name: "Aditya",    password: "admin123" },
+  { name: "Aditya",    password: "Admin0604", ingredientAccess: true },
+  { name: "Priyanka",    password: "Admin3001" },
 ];
 
 // Flatten into a single list internally while remembering category boundaries
@@ -1219,6 +1331,8 @@ function showApp(){
   document.getElementById('appContent').style.display = 'block';
   document.getElementById('headerUser').style.display = 'flex';
   document.getElementById('userChip').textContent = currentUser;
+  const userObj = USERS.find(u => u.name === currentUser);
+  document.getElementById('tabIngredients').style.display = (userObj && userObj.ingredientAccess) ? '' : 'none';
 }
 
 function doLogin(){
@@ -1264,6 +1378,7 @@ document.querySelectorAll('.tab-bar .tab').forEach(btn => {
     btn.classList.add('active');
     document.getElementById('tab-' + tab).classList.add('active');
     if(tab === 'orders') loadOrders();
+    if(tab === 'ingredients') loadIngredientTab();
   });
 });
 
@@ -1388,6 +1503,347 @@ document.getElementById('orderSearch').addEventListener('input', () => {
     showLogin();
   }
 })();
+
+
+/* ============================================================
+   Ingredient Calculator tab
+   ============================================================ */
+
+// Maps bill product names → matrix product name(s) + multiplier
+const BILL_TO_INGREDIENT = {
+  // Meals (70g) — direct mapping
+  "Nourish":    [{ product: "Nourish", mult: 1 }],
+  "Vitality":   [{ product: "Vitality", mult: 1 }],
+  "Power":      [{ product: "Power", mult: 1 }],
+  "Supreme":    [{ product: "Supreme", mult: 1 }],
+  "Nurture":    [{ product: "Nurture", mult: 1 }],
+  "Thrive":     [{ product: "Thrive", mult: 1 }],
+  // Broths (100ml)
+  "Essence":    [{ product: "Essence", mult: 1 }],
+  "Bone Rich":  [{ product: "Bone Rich", mult: 1 }],
+  // Treats
+  "Cookies 100g":  [{ product: "Cookies Chicken", mult: 1 }],
+  "Cookies 200g":  [{ product: "Cookies Chicken", mult: 2 }],
+  // Cupcakes map directly by name (first word lowercase match attempted below)
+  "Happy Tummy Cupcake (pack of 2)":          [{ product: "Happy Tummy", mult: 2 }],
+  "Purr-fect Protein Cupcake (pack of 2)":    [{ product: "Purr-fect Protein", mult: 2 }],
+  "Veggie Mew Cupcake (pack of 2)":           [{ product: "Veggie Mew", mult: 2 }],
+  "Tuna Delight Cupcake (pack of 2)":         [{ product: "Tuna Delight", mult: 2 }],
+  "Fruity Paws Cupcake (pack of 2)":          [{ product: "Fruity Paws", mult: 2 }],
+  "Golden Glow Cupcake (pack of 2)":          [{ product: "Golden Glow", mult: 2 }],
+  // Combos (Pack of 24) — 24 individual meals
+  "Nourish (Pack of 24)":   [{ product: "Nourish", mult: 24 }],
+  "Vitality (Pack of 24)":  [{ product: "Vitality", mult: 24 }],
+  "Power (Pack of 24)":     [{ product: "Power", mult: 24 }],
+  "Supreme (Pack of 24)":   [{ product: "Supreme", mult: 24 }],
+  "Nurture (Pack of 24)":   [{ product: "Nurture", mult: 24 }],
+  "Thrive (Pack of 24)":    [{ product: "Thrive", mult: 24 }],
+  // Assorted pack of 24 = 4 each of 6 meals
+  "Assorted (Pack of 24 / 4 Each)": [
+    { product: "Nourish",  mult: 4 },
+    { product: "Vitality", mult: 4 },
+    { product: "Power",    mult: 4 },
+    { product: "Supreme",  mult: 4 },
+    { product: "Nurture",  mult: 4 },
+    { product: "Thrive",   mult: 4 }
+  ],
+  // Combos (Pack of 60) — 60 individual meals
+  "Nourish (Pack of 60)":   [{ product: "Nourish", mult: 60 }],
+  "Vitality (Pack of 60)":  [{ product: "Vitality", mult: 60 }],
+  "Power (Pack of 60)":     [{ product: "Power", mult: 60 }],
+  "Supreme (Pack of 60)":   [{ product: "Supreme", mult: 60 }],
+  "Nurture (Pack of 60)":   [{ product: "Nurture", mult: 60 }],
+  "Thrive (Pack of 60)":    [{ product: "Thrive", mult: 60 }],
+  // Assorted pack of 60 = 10 each of 6 meals
+  "Assorted (Pack of 60 / 10 Each)": [
+    { product: "Nourish",  mult: 10 },
+    { product: "Vitality", mult: 10 },
+    { product: "Power",    mult: 10 },
+    { product: "Supreme",  mult: 10 },
+    { product: "Nurture",  mult: 10 },
+    { product: "Thrive",   mult: 10 }
+  ]
+};
+
+// State
+let _ingMatrix = null;        // { productName: { ingredientName: perUnitQty } }
+let _ingIngredients = [];     // ordered ingredient list from matrix sheet
+let _ingOrders = [];          // orders loaded for ingredient tab
+let _ingSelected = new Set(); // selected bill numbers
+let _ingCheckedIngs = {};     // { ingredientName: boolean } for buying checkboxes
+
+function parseItemsSummary(summary){
+  if(!summary) return [];
+  return summary.split('; ').map(part => {
+    const m = part.match(/^[^:]+:\s*(.+?)\s+x(\d+)\s+\(₹/);
+    if(!m) return null;
+    return { name: m[1].trim(), qty: parseInt(m[2], 10) };
+  }).filter(Boolean);
+}
+
+function expandBillItems(items){
+  // Returns array of { product, qty } after mapping through BILL_TO_INGREDIENT
+  const result = [];
+  items.forEach(({ name, qty }) => {
+    const mappings = BILL_TO_INGREDIENT[name];
+    if(!mappings) return;
+    mappings.forEach(({ product, mult }) => {
+      result.push({ product, qty: qty * mult });
+    });
+  });
+  return result;
+}
+
+function computeIngTotals(selectedBillNos){
+  // Aggregate ingredient totals across selected orders
+  const totals = {};
+  _ingOrders.forEach(order => {
+    if(!selectedBillNos.has(order.billNo)) return;
+    const items = parseItemsSummary(order.itemsSummary);
+    const expanded = expandBillItems(items);
+    expanded.forEach(({ product, qty }) => {
+      const ingMap = _ingMatrix[product];
+      if(!ingMap) return;
+      Object.entries(ingMap).forEach(([ing, perUnit]) => {
+        totals[ing] = (totals[ing] || 0) + perUnit * qty;
+      });
+    });
+  });
+  return totals;
+}
+
+function getSelectedProductTotals(){
+  // Returns { productName: totalQty } for making sub-tab radio list
+  const prod = {};
+  _ingOrders.forEach(order => {
+    if(!_ingSelected.has(order.billNo)) return;
+    const items = parseItemsSummary(order.itemsSummary);
+    const expanded = expandBillItems(items);
+    expanded.forEach(({ product, qty }) => {
+      if(_ingMatrix[product]) prod[product] = (prod[product] || 0) + qty;
+    });
+  });
+  return prod;
+}
+
+async function loadIngMatrix(){
+  if(_ingMatrix) return;
+  if(!INGREDIENTS_WEBHOOK_URL){
+    _ingMatrix = {};
+    _ingIngredients = [];
+    return;
+  }
+  try {
+    const res = await fetch(`${INGREDIENTS_WEBHOOK_URL}?action=matrix`);
+    const data = await res.json();
+    if(data.status === 'success'){
+      _ingMatrix = data.matrix;
+      _ingIngredients = data.ingredients;
+    } else {
+      _ingMatrix = {};
+    }
+  } catch(e){
+    _ingMatrix = {};
+  }
+}
+
+async function loadIngOrders(){
+  document.getElementById('ingOrdersList').innerHTML = '<div class="orders-loading">Loading orders…</div>';
+  try {
+    const res = await fetch(`${SHEET_WEBHOOK_URL}?action=orders&limit=200`);
+    const data = await res.json();
+    _ingOrders = (data.orders || []).filter(o => o.paymentStatus === 'Paid');
+    // Sort by dispatch date ascending (soonest first), then by bill number
+    _ingOrders.sort((a, b) => {
+      const da = a.dispatchDate || '';
+      const db = b.dispatchDate || '';
+      if(da !== db) return da < db ? -1 : 1;
+      return (a.billNo || '').localeCompare(b.billNo || '');
+    });
+    renderIngOrders();
+  } catch(e){
+    document.getElementById('ingOrdersList').innerHTML = '<div class="orders-loading">Failed to load orders.</div>';
+  }
+}
+
+function renderIngOrders(){
+  const el = document.getElementById('ingOrdersList');
+  if(!_ingOrders.length){
+    el.innerHTML = '<div class="orders-loading">No paid orders found.</div>';
+    return;
+  }
+  el.innerHTML = _ingOrders.map(order => {
+    const sel = _ingSelected.has(order.billNo);
+    const dispatch = order.dispatchDate ? `Dispatch: ${order.dispatchDate}` : '';
+    return `<div class="ing-order-card${sel ? ' ing-selected' : ''}" data-bill="${order.billNo}">
+      <input type="checkbox" ${sel ? 'checked' : ''} data-bill="${order.billNo}">
+      <div class="ing-order-info">
+        <div class="ing-order-name">${order.name} — ${order.billNo}</div>
+        <div class="ing-order-meta">₹${order.totalAmount} · ${order.totalItems} item${order.totalItems !== 1 ? 's' : ''}</div>
+        ${dispatch ? `<div class="ing-order-dispatch">${dispatch}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  el.querySelectorAll('.ing-order-card').forEach(card => {
+    card.addEventListener('click', e => {
+      if(e.target.tagName === 'INPUT') return;
+      const bill = card.dataset.bill;
+      toggleIngSelection(bill);
+    });
+    const cb = card.querySelector('input[type="checkbox"]');
+    cb.addEventListener('change', () => toggleIngSelection(card.dataset.bill));
+  });
+}
+
+function toggleIngSelection(billNo){
+  if(_ingSelected.has(billNo)) _ingSelected.delete(billNo);
+  else _ingSelected.add(billNo);
+  renderIngOrders();
+  updateIngCalcPanel();
+}
+
+function updateIngCalcPanel(){
+  const count = _ingSelected.size;
+  const bar = document.getElementById('ingSelectedBar');
+  const panel = document.getElementById('ingCalcPanel');
+  if(count === 0){
+    bar.style.display = 'none';
+    panel.style.display = 'none';
+    return;
+  }
+  bar.style.display = 'flex';
+  document.getElementById('ingSelectedCount').textContent = `${count} order${count !== 1 ? 's' : ''} selected`;
+  panel.style.display = 'block';
+
+  // Refresh active sub-tab
+  const activeSubTab = document.querySelector('.ing-sub-tab.active');
+  const itab = activeSubTab ? activeSubTab.dataset.itab : 'buying';
+  if(itab === 'buying') renderIngBuying();
+  else renderIngMaking();
+}
+
+function renderIngBuying(){
+  const totals = computeIngTotals(_ingSelected);
+  const list = document.getElementById('ingBuyingList');
+  const ings = _ingIngredients.length ? _ingIngredients : Object.keys(totals);
+  const rows = ings.filter(ing => totals[ing] > 0).map(ing => {
+    const qty = totals[ing];
+    const display = Number.isInteger(qty) ? qty : parseFloat(qty.toFixed(3));
+    const checked = _ingCheckedIngs[ing] !== false;
+    return `<div class="ing-ing-row">
+      <input type="checkbox" ${checked ? 'checked' : ''} data-ing="${ing}" class="ing-buy-cb">
+      <span class="ing-ing-name">${ing}</span>
+      <span class="ing-ing-qty">${display}g</span>
+    </div>`;
+  }).join('');
+  list.innerHTML = rows || '<div style="padding:12px;color:var(--muted);font-size:13px;">No ingredients found for selected orders.</div>';
+
+  list.querySelectorAll('.ing-buy-cb').forEach(cb => {
+    cb.addEventListener('change', () => {
+      _ingCheckedIngs[cb.dataset.ing] = cb.checked;
+    });
+  });
+}
+
+function renderIngMaking(){
+  const prodTotals = getSelectedProductTotals();
+  const radios = document.getElementById('ingMakingRadios');
+  const products = Object.entries(prodTotals);
+  if(!products.length){
+    radios.innerHTML = '<div style="padding:12px;color:var(--muted);font-size:13px;">No mappable products in selected orders.</div>';
+    document.getElementById('ingMakingResult').style.display = 'none';
+    return;
+  }
+  radios.innerHTML = products.map(([product, qty], idx) => {
+    return `<label class="ing-radio-row">
+      <input type="radio" name="ingProduct" value="${product}" ${idx === 0 ? 'checked' : ''}>
+      <div>
+        <div class="ing-radio-label">${product}</div>
+        <div class="ing-radio-sub">${qty} unit${qty !== 1 ? 's' : ''} across selected orders</div>
+      </div>
+    </label>`;
+  }).join('');
+
+  radios.querySelectorAll('input[type="radio"]').forEach(r => {
+    r.addEventListener('change', () => showMakingIngredients(r.value, prodTotals[r.value]));
+  });
+  // Show first product by default
+  showMakingIngredients(products[0][0], products[0][1]);
+}
+
+function showMakingIngredients(product, totalQty){
+  const resultEl = document.getElementById('ingMakingResult');
+  const titleEl = document.getElementById('ingMakingProductTitle');
+  const listEl = document.getElementById('ingMakingIngList');
+  const ingMap = _ingMatrix[product];
+  if(!ingMap){
+    resultEl.style.display = 'none';
+    return;
+  }
+  titleEl.textContent = `${product} — ${totalQty} unit${totalQty !== 1 ? 's' : ''}`;
+  const ings = _ingIngredients.length ? _ingIngredients : Object.keys(ingMap);
+  listEl.innerHTML = ings.filter(ing => ingMap[ing] > 0).map(ing => {
+    const perUnit = ingMap[ing];
+    const total = perUnit * totalQty;
+    const displayTotal = Number.isInteger(total) ? total : parseFloat(total.toFixed(3));
+    const displayPer = Number.isInteger(perUnit) ? perUnit : parseFloat(perUnit.toFixed(3));
+    return `<div class="ing-ing-row">
+      <span class="ing-ing-name">${ing}</span>
+      <span class="ing-ing-qty">${displayPer}g × ${totalQty} = ${displayTotal}g</span>
+    </div>`;
+  }).join('') || '<div style="padding:12px;color:var(--muted);font-size:13px;">No ingredients on record.</div>';
+  resultEl.style.display = 'block';
+}
+
+async function loadIngredientTab(){
+  await loadIngMatrix();
+  if(!_ingOrders.length) await loadIngOrders();
+  else renderIngOrders();
+  updateIngCalcPanel();
+}
+
+// Ingredient sub-tab switching
+document.getElementById('ingSubTabBuying').addEventListener('click', () => {
+  document.querySelectorAll('.ing-sub-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('ingSubTabBuying').classList.add('active');
+  document.getElementById('ing-itab-buying').style.display = '';
+  document.getElementById('ing-itab-making').style.display = 'none';
+  renderIngBuying();
+});
+document.getElementById('ingSubTabMaking').addEventListener('click', () => {
+  document.querySelectorAll('.ing-sub-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('ingSubTabMaking').classList.add('active');
+  document.getElementById('ing-itab-buying').style.display = 'none';
+  document.getElementById('ing-itab-making').style.display = '';
+  renderIngMaking();
+});
+
+// Clear selected orders
+document.getElementById('ingClearBtn').addEventListener('click', () => {
+  _ingSelected.clear();
+  renderIngOrders();
+  updateIngCalcPanel();
+});
+
+// WhatsApp share button
+document.getElementById('ingShareBtn').addEventListener('click', () => {
+  const totals = computeIngTotals(_ingSelected);
+  const ings = _ingIngredients.length ? _ingIngredients : Object.keys(totals);
+  const lines = ings.filter(ing => {
+    const checked = _ingCheckedIngs[ing] !== false;
+    return checked && totals[ing] > 0;
+  }).map(ing => {
+    const qty = totals[ing];
+    const display = Number.isInteger(qty) ? qty : parseFloat(qty.toFixed(3));
+    return `• ${ing}: ${display}g`;
+  });
+  if(!lines.length){ alert('No ingredients selected.'); return; }
+  const orderNos = [..._ingSelected].join(', ');
+  const text = `*CCK Ingredient List*\nOrders: ${orderNos}\n\n${lines.join('\n')}`;
+  const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+  window.open(url, '_blank');
+});
 
 renderProducts();
 updateTotals();

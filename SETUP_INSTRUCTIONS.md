@@ -127,3 +127,34 @@ Open your Google Sheet anytime — every generated bill appears as a new row at 
 ## Using the page day-to-day
 
 Just open your live Vercel URL on your or your partner's phone — bookmark it to the home screen for one-tap access. Fill in customer details, tap product counters (or tap the number to type an exact quantity), add delivery charges/dispatch dates/remarks if relevant, then tap **Generate Bill** to get a shareable image with the payment QR included.
+
+
+---
+
+## Ingredient Calculator (Aditya only)
+
+The **Ingredients** tab appears only when logged in as Aditya. It lets you select one or more paid orders, then:
+- **Buying sub-tab**: see the total ingredient quantities needed (in grams) across all selected orders, with checkboxes and a WhatsApp share button.
+- **Making sub-tab**: pick a product and see per-unit ingredient breakdown × the total quantity.
+
+### Setting up IngredientCalc.gs
+
+This is a *separate* Apps Script deployed from the **Ingredient Calculator** sheet (`19KsODKUYk8_1eeSTlk20Kt92MIXjj17BPk_iDaAP8Oc`).
+
+1. Open the Ingredient Calculator Google Sheet
+2. Click **Extensions → Apps Script**
+3. Delete any existing code, paste in the contents of `IngredientCalc.gs`
+4. Click **Save** (Ctrl+S)
+5. Click **Deploy → New deployment**
+6. Type: **Web app**, Execute as: **Me**, Access: **Anyone**
+7. Click **Deploy** and copy the URL
+8. In `index.html`, find: `const INGREDIENTS_WEBHOOK_URL = "";`
+9. Paste the URL between the quotes and save/redeploy the site
+
+### Sheet structure expected by IngredientCalc.gs
+
+The Apps Script reads the sheet named **`Product_ingredient_matrix`**:
+- **Row 1** = headers: Column A = product name, Column B = category (ignored), Columns C onward = ingredient names
+- **Rows 2+** = one product per row; ingredient cells contain the per-unit quantity in grams (can be formulas)
+
+Ingredients `Banana` and `Beetroot` are excluded automatically from the output.
