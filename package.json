@@ -1,0 +1,11 @@
+{
+  "name": "cck-bill",
+  "private": true,
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "serve": "^14.2.0"
+  }
+}
