@@ -1,9 +1,9 @@
 {
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/dashboard",   "destination": "/index.html" },
-    { "source": "/ebill",       "destination": "/index.html" },
-    { "source": "/orders",      "destination": "/index.html" },
-    { "source": "/ingredients", "destination": "/index.html" }
+    { "source": "/dashboard",   "destination": "/" },
+    { "source": "/ebill",       "destination": "/" },
+    { "source": "/orders",      "destination": "/" },
+    { "source": "/ingredients", "destination": "/" }
   ]
 }
