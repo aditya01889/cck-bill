@@ -2704,8 +2704,6 @@ function loadIngMatrix(){
 async function loadIngOrders(){
   const packed = new Set(['Packed', 'Dispatched', 'Delivered']);
   let allOrders;
-  // If a prefetch is already in flight, wait for it rather than firing a duplicate request
-  if(_ordersLoadPromise && !_ordersLoaded) await _ordersLoadPromise;
   if(_ordersLoaded && _ordersCache.length){
     allOrders = _ordersCache;
   } else {
@@ -2714,8 +2712,7 @@ async function loadIngOrders(){
       const res = await fetch(`${SHEET_WEBHOOK_URL}?action=orders&limit=200`);
       const data = await res.json();
       allOrders = data.orders || [];
-      _ordersCache = allOrders;
-      _ordersLoaded = true;
+      if(!_ordersLoaded){ _ordersCache = allOrders; _ordersLoaded = true; }
     } catch(e){
       document.getElementById('ingOrdersList').innerHTML = '<div class="orders-loading">Failed to load orders.</div>';
       return;
