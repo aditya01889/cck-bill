@@ -1626,6 +1626,7 @@ function showApp(isRestore){
   }
   prefetchOrders();
   prefetchCustomers();
+  if(userObj && userObj.access.includes('ingredients')) loadIngMatrix();
 }
 
 function doLogin(){
@@ -2548,33 +2549,34 @@ async function loadIngMatrix(){
 }
 
 async function loadIngOrders(){
-  document.getElementById('ingOrdersList').innerHTML = '<div class="orders-loading">Loading orders…</div>';
-  try {
-    const packed = new Set(['Packed', 'Dispatched', 'Delivered']);
-    let allOrders;
-    if(_ordersLoaded && _ordersCache.length){
-      allOrders = _ordersCache;
-    } else {
+  const packed = new Set(['Packed', 'Dispatched', 'Delivered']);
+  let allOrders;
+  if(_ordersLoaded && _ordersCache.length){
+    allOrders = _ordersCache;
+  } else {
+    document.getElementById('ingOrdersList').innerHTML = '<div class="orders-loading">Loading orders…</div>';
+    try {
       const res = await fetch(`${SHEET_WEBHOOK_URL}?action=orders&limit=200`);
       const data = await res.json();
       allOrders = data.orders || [];
       _ordersCache = allOrders;
       _ordersLoaded = true;
+    } catch(e){
+      document.getElementById('ingOrdersList').innerHTML = '<div class="orders-loading">Failed to load orders.</div>';
+      return;
     }
-    _ingOrders = allOrders.filter(o =>
-      o.paymentStatus === 'Paid' && !packed.has(String(o.fulfillmentStatus || '').trim())
-    );
-    // Sort by dispatch date ascending (soonest first), then by bill number
-    _ingOrders.sort((a, b) => {
-      const da = a.dispatchDate || '';
-      const db = b.dispatchDate || '';
-      if(da !== db) return da < db ? -1 : 1;
-      return (a.billNo || '').localeCompare(b.billNo || '');
-    });
-    renderIngOrders();
-  } catch(e){
-    document.getElementById('ingOrdersList').innerHTML = '<div class="orders-loading">Failed to load orders.</div>';
   }
+  _ingOrders = allOrders.filter(o =>
+    o.paymentStatus === 'Paid' && !packed.has(String(o.fulfillmentStatus || '').trim())
+  );
+  // Sort by dispatch date ascending (soonest first), then by bill number
+  _ingOrders.sort((a, b) => {
+    const da = a.dispatchDate || '';
+    const db = b.dispatchDate || '';
+    if(da !== db) return da < db ? -1 : 1;
+    return (a.billNo || '').localeCompare(b.billNo || '');
+  });
+  renderIngOrders();
 }
 
 function renderIngOrders(){
