@@ -1742,6 +1742,17 @@ let _ordersCache = [];
 let _customersLoaded = false;
 let _customersCache = [];
 
+// Ingredient-tab state. Declared here (before the checkLogin IIFE that runs
+// during initial script execution) so a refresh onto /ingredients doesn't hit
+// a temporal dead zone: checkLogin → showApp → loadIngredientTab/loadIngMatrix
+// reference these before their old declaration site further down the script.
+let _ingMatrix = null;        // { productName: { ingredientName: perUnitQty } }
+let _ingMatrixPromise = null;
+let _ingIngredients = [];     // ordered ingredient list from matrix sheet
+let _ingOrders = [];          // orders loaded for ingredient tab
+let _ingSelected = new Set(); // selected bill numbers
+let _ingCheckedIngs = {};     // { ingredientName: boolean } for buying checkboxes
+
 function statusBadgeClass(s){
   if(!s) return '';
   const l = s.toLowerCase();
@@ -2611,13 +2622,8 @@ const BILL_TO_INGREDIENT = {
   ]
 };
 
-// State
-let _ingMatrix = null;        // { productName: { ingredientName: perUnitQty } }
-let _ingMatrixPromise = null;
-let _ingIngredients = [];     // ordered ingredient list from matrix sheet
-let _ingOrders = [];          // orders loaded for ingredient tab
-let _ingSelected = new Set(); // selected bill numbers
-let _ingCheckedIngs = {};     // { ingredientName: boolean } for buying checkboxes
+// State — _ing* variables are declared earlier (above the checkLogin IIFE)
+// to avoid a temporal-dead-zone error on refresh onto /ingredients.
 
 function parseItemsSummary(summary){
   if(!summary) return [];
@@ -2726,7 +2732,7 @@ async function loadIngOrders(){
     const da = a.dispatchDate || '';
     const db = b.dispatchDate || '';
     if(da !== db) return da < db ? -1 : 1;
-    return (a.billNo || '').localeCompare(b.billNo || '');
+    return String(a.billNo || '').localeCompare(String(b.billNo || ''));
   });
   renderIngOrders();
 }
