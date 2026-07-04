@@ -2865,9 +2865,12 @@ function showMakingIngredients(product, totalQty){
 }
 
 async function loadIngredientTab(){
-  await loadIngMatrix();
+  // Start the matrix fetch in parallel — don't block order rendering on it
+  const matrixPromise = loadIngMatrix();
   if(!_ingOrders.length) await loadIngOrders();
   else renderIngOrders();
+  // Wait for matrix before updating the calc panel (needs ingredient data)
+  await matrixPromise;
   updateIngCalcPanel();
 }
 
