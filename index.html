@@ -988,7 +988,7 @@
     <button id="ingClearBtn">Clear all</button>
   </div>
 
-  <div id="ingOrdersList"><div class="orders-loading">Loading orders…</div></div>
+  <div id="ingOrdersList"></div>
 
   <div id="ingCalcPanel" style="display:none;margin-top:18px;">
     <div class="ing-sub-tab-bar">
@@ -1648,17 +1648,16 @@ function showApp(isRestore){
   document.querySelectorAll('.tab-bar .tab').forEach(btn => {
     btn.style.display = (userObj && userObj.access.includes(btn.dataset.tab)) ? '' : 'none';
   });
-  // Fire all prefetches before navigating so data is in-flight while the UI loads
+  const landing = userObj ? userObj.landing : 'dashboard';
+  if(isRestore){
+    const tab = routeToTab(location.pathname);
+    navigateTo((tab && userObj && userObj.access.includes(tab)) ? tab : landing, true);
+  } else {
+    navigateTo(landing, true);
+  }
   prefetchOrders();
   prefetchCustomers();
   if(userObj && userObj.access.includes('ingredients')) loadIngMatrix();
-  if(isRestore){
-    const tab = routeToTab(location.pathname);
-    if(userObj && userObj.access.includes(tab)) showTab(tab);
-    else navigateTo(userObj ? userObj.landing : 'dashboard', true);
-  } else {
-    navigateTo(userObj ? userObj.landing : 'dashboard', true);
-  }
 }
 
 function doLogin(){
@@ -2684,7 +2683,10 @@ function loadIngMatrix(){
       return;
     }
     try {
-      const res = await fetch(`${INGREDIENTS_WEBHOOK_URL}?action=matrix`);
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 10000);
+      const res = await fetch(`${INGREDIENTS_WEBHOOK_URL}?action=matrix`, { signal: ctrl.signal });
+      clearTimeout(timer);
       const data = await res.json();
       if(data.status === 'success'){
         _ingMatrix = data.matrix;
@@ -2863,6 +2865,9 @@ function showMakingIngredients(product, totalQty){
 }
 
 async function loadIngredientTab(){
+  if(!_ingOrders.length){
+    document.getElementById('ingOrdersList').innerHTML = '<div class="orders-loading">Loading orders…</div>';
+  }
   await loadIngMatrix();
   if(!_ingOrders.length) await loadIngOrders();
   else renderIngOrders();
