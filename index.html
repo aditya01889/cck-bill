@@ -1648,10 +1648,6 @@ function showApp(isRestore){
   document.querySelectorAll('.tab-bar .tab').forEach(btn => {
     btn.style.display = (userObj && userObj.access.includes(btn.dataset.tab)) ? '' : 'none';
   });
-  // Fire all prefetches before navigating so data is in-flight while the UI loads
-  prefetchOrders();
-  prefetchCustomers();
-  if(userObj && userObj.access.includes('ingredients')) loadIngMatrix();
   if(isRestore){
     const tab = routeToTab(location.pathname);
     if(userObj && userObj.access.includes(tab)) showTab(tab);
@@ -1659,6 +1655,9 @@ function showApp(isRestore){
   } else {
     navigateTo(userObj ? userObj.landing : 'dashboard', true);
   }
+  prefetchOrders();
+  prefetchCustomers();
+  if(userObj && userObj.access.includes('ingredients')) loadIngMatrix();
 }
 
 function doLogin(){
