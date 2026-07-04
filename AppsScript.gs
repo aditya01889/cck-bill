@@ -50,6 +50,8 @@ function doPost(e) {
       data.shareToken || ''  // Share Token (T)
     ]);
 
+    upsertCustomer(data.name || '', data.phone || '', data.email || '', data.address || '', data.dateStr || '');
+
     return ContentService.createTextOutput(JSON.stringify({ status: 'success' }))
       .setMimeType(ContentService.MimeType.JSON);
 
@@ -80,6 +82,10 @@ function doGet(e) {
       e.parameter.fulfillmentStatus || '',
       e.parameter.trackingLink || ''
     );
+  }
+
+  if (action === 'customers') {
+    return getCustomers();
   }
 
   return ContentService.createTextOutput('CozyCatKitchen order logger is running.');
@@ -235,6 +241,115 @@ function updateFulfillment(billNo, fulfillmentStatus, trackingLink) {
 function jsonResponse(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * Returns all customers from the Customers sheet tab.
+ */
+function getCustomers() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var cs = ss.getSheetByName('Customers');
+    if (!cs || cs.getLastRow() <= 1) return jsonResponse({ status: 'success', customers: [] });
+    var rows = cs.getRange(2, 1, cs.getLastRow() - 1, 7).getValues();
+    var customers = rows.filter(function(r) { return String(r[0]).trim(); }).map(function(r) {
+      return { name: r[0], phone: r[1], address: r[2], email: r[3], notes: r[4], lastOrderDate: r[5], totalOrders: r[6] };
+    });
+    return jsonResponse({ status: 'success', customers: customers });
+  } catch (err) {
+    return jsonResponse({ status: 'error', message: err.toString() });
+  }
+}
+
+/**
+ * Creates or updates a customer record in the Customers sheet.
+ * Matched by name (case-insensitive). Updates phone/email/address
+ * with the latest values and increments the order count.
+ */
+function upsertCustomer(name, phone, email, address, orderDate) {
+  if (!String(name).trim()) return;
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var cs = ss.getSheetByName('Customers');
+    if (!cs) {
+      cs = ss.insertSheet('Customers');
+      cs.appendRow(['Name', 'Phone', 'Address', 'Email', 'Notes', 'LastOrderDate', 'TotalOrders']);
+    }
+    var nameLower = String(name).trim().toLowerCase();
+    var lastRow = cs.getLastRow();
+    if (lastRow > 1) {
+      var names = cs.getRange(2, 1, lastRow - 1, 1).getValues();
+      for (var i = 0; i < names.length; i++) {
+        if (String(names[i][0]).trim().toLowerCase() === nameLower) {
+          var row = i + 2;
+          if (phone) cs.getRange(row, 2).setValue(phone);
+          if (address) cs.getRange(row, 3).setValue(address);
+          if (email) cs.getRange(row, 4).setValue(email);
+          cs.getRange(row, 6).setValue(orderDate || '');
+          var prev = cs.getRange(row, 7).getValue() || 0;
+          cs.getRange(row, 7).setValue(Number(prev) + 1);
+          return;
+        }
+      }
+    }
+    cs.appendRow([String(name).trim(), phone || '', address || '', email || '', '', orderDate || '', 1]);
+  } catch (err) {
+    Logger.log('upsertCustomer error: ' + err.toString());
+  }
+}
+
+/**
+ * ONE-TIME MIGRATION — run once from the Apps Script editor to:
+ *   1. Create (or recreate) the Customers sheet tab
+ *   2. Add column headers
+ *   3. Backfill all unique customers from the existing Orders sheet
+ *
+ * Safe to re-run — it clears and rebuilds the sheet each time.
+ */
+function migrateCustomersFromOrders() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var cs = ss.getSheetByName('Customers');
+  if (!cs) {
+    cs = ss.insertSheet('Customers');
+  } else {
+    cs.clearContents();
+  }
+  cs.appendRow(['Name', 'Phone', 'Address', 'Email', 'Notes', 'LastOrderDate', 'TotalOrders']);
+
+  var os = ss.getActiveSheet();
+  var lastRow = os.getLastRow();
+  if (lastRow <= 1) { Logger.log('No orders to migrate.'); return; }
+
+  var data = os.getRange(2, 1, lastRow - 1, 20).getValues();
+  var map = {};
+  for (var i = 0; i < data.length; i++) {
+    var r = data[i];
+    var rawName = String(r[2]).trim();
+    if (!rawName) continue;
+    var key = rawName.toLowerCase();
+    var dateVal = r[1] ? new Date(r[1]) : null;
+    if (!map[key]) {
+      map[key] = { name: rawName, phone: String(r[3]).trim(), address: String(r[5]).trim(), email: String(r[4]).trim(), lastDate: dateVal, count: 1 };
+    } else {
+      map[key].count++;
+      if (dateVal && (!map[key].lastDate || dateVal > map[key].lastDate)) {
+        map[key].lastDate = dateVal;
+        if (r[3]) map[key].phone = String(r[3]).trim();
+        if (r[5]) map[key].address = String(r[5]).trim();
+        if (r[4]) map[key].email = String(r[4]).trim();
+      }
+    }
+  }
+
+  var rows = [];
+  for (var key in map) {
+    var c = map[key];
+    var dateStr = c.lastDate ? Utilities.formatDate(c.lastDate, Session.getScriptTimeZone(), 'dd/MM/yyyy') : '';
+    rows.push([c.name, c.phone, c.address, c.email, '', dateStr, c.count]);
+  }
+  rows.sort(function(a, b) { return b[6] - a[6]; });
+  if (rows.length > 0) cs.getRange(2, 1, rows.length, 7).setValues(rows);
+  Logger.log('Migrated ' + rows.length + ' unique customers.');
 }
 
 /**
