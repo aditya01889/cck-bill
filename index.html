@@ -988,7 +988,7 @@
     <button id="ingClearBtn">Clear all</button>
   </div>
 
-  <div id="ingOrdersList"></div>
+  <div id="ingOrdersList"><div class="orders-loading">Loading orders…</div></div>
 
   <div id="ingCalcPanel" style="display:none;margin-top:18px;">
     <div class="ing-sub-tab-bar">
@@ -2865,9 +2865,6 @@ function showMakingIngredients(product, totalQty){
 }
 
 async function loadIngredientTab(){
-  if(!_ingOrders.length){
-    document.getElementById('ingOrdersList').innerHTML = '<div class="orders-loading">Loading orders…</div>';
-  }
   await loadIngMatrix();
   if(!_ingOrders.length) await loadIngOrders();
   else renderIngOrders();
