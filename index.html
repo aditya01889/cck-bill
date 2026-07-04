@@ -1648,6 +1648,10 @@ function showApp(isRestore){
   document.querySelectorAll('.tab-bar .tab').forEach(btn => {
     btn.style.display = (userObj && userObj.access.includes(btn.dataset.tab)) ? '' : 'none';
   });
+  // Fire all prefetches before navigating so data is in-flight while the UI loads
+  prefetchOrders();
+  prefetchCustomers();
+  if(userObj && userObj.access.includes('ingredients')) loadIngMatrix();
   if(isRestore){
     const tab = routeToTab(location.pathname);
     if(userObj && userObj.access.includes(tab)) showTab(tab);
@@ -1655,9 +1659,6 @@ function showApp(isRestore){
   } else {
     navigateTo(userObj ? userObj.landing : 'dashboard', true);
   }
-  prefetchOrders();
-  prefetchCustomers();
-  if(userObj && userObj.access.includes('ingredients')) loadIngMatrix();
 }
 
 function doLogin(){
@@ -1736,6 +1737,7 @@ document.querySelectorAll('.tab-bar .tab').forEach(btn => {
    Orders tab — history + mark as paid
    ============================================================ */
 let _ordersLoaded = false;
+let _ordersLoadPromise = null;
 let _selectedBillNo = null;
 let _ordersCache = [];
 let _customersLoaded = false;
@@ -2017,19 +2019,23 @@ function closeOrderDetail(){
   document.getElementById('orderDetailOverlay').classList.remove('show');
 }
 
-async function prefetchOrders(){
-  if(_ordersLoaded || !SHEET_WEBHOOK_URL) return;
-  try{
-    const res = await fetch(`${SHEET_WEBHOOK_URL}?action=orders&limit=200`);
-    const data = await res.json();
-    if(data.status === 'success'){
-      _ordersCache = data.orders || [];
-      _ordersLoaded = true;
-      if(document.getElementById('tab-dashboard').classList.contains('active')){
-        renderDashboard(_ordersCache);
+function prefetchOrders(){
+  if(_ordersLoaded || !SHEET_WEBHOOK_URL) return _ordersLoadPromise;
+  if(_ordersLoadPromise) return _ordersLoadPromise;
+  _ordersLoadPromise = (async () => {
+    try{
+      const res = await fetch(`${SHEET_WEBHOOK_URL}?action=orders&limit=200`);
+      const data = await res.json();
+      if(data.status === 'success'){
+        _ordersCache = data.orders || [];
+        _ordersLoaded = true;
+        if(document.getElementById('tab-dashboard').classList.contains('active')){
+          renderDashboard(_ordersCache);
+        }
       }
-    }
-  }catch(e){ /* silent — loadOrders/loadDashboard handle their own errors */ }
+    }catch(e){ /* silent — loadOrders/loadDashboard handle their own errors */ }
+  })();
+  return _ordersLoadPromise;
 }
 
 async function prefetchCustomers(){
@@ -2608,6 +2614,7 @@ const BILL_TO_INGREDIENT = {
 
 // State
 let _ingMatrix = null;        // { productName: { ingredientName: perUnitQty } }
+let _ingMatrixPromise = null;
 let _ingIngredients = [];     // ordered ingredient list from matrix sheet
 let _ingOrders = [];          // orders loaded for ingredient tab
 let _ingSelected = new Set(); // selected bill numbers
@@ -2667,30 +2674,36 @@ function getSelectedProductTotals(){
   return prod;
 }
 
-async function loadIngMatrix(){
-  if(_ingMatrix) return;
-  if(!INGREDIENTS_WEBHOOK_URL){
-    _ingMatrix = {};
-    _ingIngredients = [];
-    return;
-  }
-  try {
-    const res = await fetch(`${INGREDIENTS_WEBHOOK_URL}?action=matrix`);
-    const data = await res.json();
-    if(data.status === 'success'){
-      _ingMatrix = data.matrix;
-      _ingIngredients = data.ingredients;
-    } else {
+function loadIngMatrix(){
+  if(_ingMatrix) return Promise.resolve();
+  if(_ingMatrixPromise) return _ingMatrixPromise;
+  _ingMatrixPromise = (async () => {
+    if(!INGREDIENTS_WEBHOOK_URL){
+      _ingMatrix = {};
+      _ingIngredients = [];
+      return;
+    }
+    try {
+      const res = await fetch(`${INGREDIENTS_WEBHOOK_URL}?action=matrix`);
+      const data = await res.json();
+      if(data.status === 'success'){
+        _ingMatrix = data.matrix;
+        _ingIngredients = data.ingredients;
+      } else {
+        _ingMatrix = {};
+      }
+    } catch(e){
       _ingMatrix = {};
     }
-  } catch(e){
-    _ingMatrix = {};
-  }
+  })();
+  return _ingMatrixPromise;
 }
 
 async function loadIngOrders(){
   const packed = new Set(['Packed', 'Dispatched', 'Delivered']);
   let allOrders;
+  // If a prefetch is already in flight, wait for it rather than firing a duplicate request
+  if(_ordersLoadPromise && !_ordersLoaded) await _ordersLoadPromise;
   if(_ordersLoaded && _ordersCache.length){
     allOrders = _ordersCache;
   } else {
