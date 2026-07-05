@@ -1110,6 +1110,62 @@ const UPI_ID = "cozycatkitchen@ptaxis";
 const UPI_PAYEE_NAME = "CozyCatKitchen";
 
 /* ============================================================
+   Global error visibility + network timeouts
+   ------------------------------------------------------------
+   Silent failures (e.g. an unhandled promise rejection, or a
+   backend request that never returns) are what made past bugs so
+   hard to spot. These two utilities make both cases loud:
+     • a global handler that logs and shows a dismissible toast
+     • fetchWithTimeout() so no request can hang a tab forever
+   ============================================================ */
+const DEFAULT_FETCH_TIMEOUT_MS = 15000;
+
+async function fetchWithTimeout(resource, options = {}, timeoutMs = DEFAULT_FETCH_TIMEOUT_MS){
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(resource, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function showErrorToast(message){
+  let el = document.getElementById('globalErrorToast');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'globalErrorToast';
+    el.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);' +
+      'max-width:90%;background:#b3261e;color:#fff;padding:12px 16px;border-radius:10px;' +
+      'font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.25);z-index:9999;display:flex;' +
+      'gap:12px;align-items:center;';
+    const span = document.createElement('span');
+    span.id = 'globalErrorToastMsg';
+    const close = document.createElement('button');
+    close.textContent = '✕';
+    close.setAttribute('aria-label', 'Dismiss');
+    close.style.cssText = 'background:none;border:none;color:#fff;font-size:15px;cursor:pointer;line-height:1;';
+    close.onclick = () => el.remove();
+    el.appendChild(span);
+    el.appendChild(close);
+    document.body.appendChild(el);
+  }
+  document.getElementById('globalErrorToastMsg').textContent = message;
+  clearTimeout(el._hideTimer);
+  el._hideTimer = setTimeout(() => { if(el && el.parentNode) el.remove(); }, 8000);
+}
+
+function reportClientError(err, context){
+  console.error('[CCK] Unhandled error' + (context ? ' (' + context + ')' : '') + ':', err);
+  // Aborted fetches (timeouts) already surface their own inline message — don't double-report.
+  if(err && err.name === 'AbortError') return;
+  try { showErrorToast('Something went wrong. Please try again — details are in the console.'); } catch(_){}
+}
+
+window.addEventListener('error', e => reportClientError(e.error || e.message, 'window.onerror'));
+window.addEventListener('unhandledrejection', e => reportClientError(e.reason, 'unhandledrejection'));
+
+/* ============================================================
    EDIT ZONE 2 — YOUR PRODUCT CATALOG
    Organized by category. Each category has a name and a list
    of products. To add/remove/edit products or categories,
@@ -1610,7 +1666,7 @@ function logToSheet(data){
     deliveryType: data.deliveryType || '',
     shareToken: data.shareToken || ''
   };
-  fetch(SHEET_WEBHOOK_URL, {
+  fetchWithTimeout(SHEET_WEBHOOK_URL, {
     method: 'POST',
     mode: 'no-cors',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -2034,7 +2090,7 @@ function prefetchOrders(){
   if(_ordersLoadPromise) return _ordersLoadPromise;
   _ordersLoadPromise = (async () => {
     try{
-      const res = await fetch(`${SHEET_WEBHOOK_URL}?action=orders&limit=200`);
+      const res = await fetchWithTimeout(`${SHEET_WEBHOOK_URL}?action=orders&limit=200`);
       const data = await res.json();
       if(data.status === 'success'){
         _ordersCache = data.orders || [];
@@ -2051,7 +2107,7 @@ function prefetchOrders(){
 async function prefetchCustomers(){
   if(_customersLoaded || !SHEET_WEBHOOK_URL) return;
   try{
-    const res = await fetch(`${SHEET_WEBHOOK_URL}?action=customers`);
+    const res = await fetchWithTimeout(`${SHEET_WEBHOOK_URL}?action=customers`);
     const data = await res.json();
     if(data.status === 'success'){
       _customersCache = data.customers || [];
@@ -2408,7 +2464,7 @@ async function loadOrders(search){
   }
   document.getElementById('ordersList').innerHTML = '<div class="orders-loading">Loading…</div>';
   try{
-    const res = await fetch(`${SHEET_WEBHOOK_URL}?action=orders&limit=200`);
+    const res = await fetchWithTimeout(`${SHEET_WEBHOOK_URL}?action=orders&limit=200`);
     const data = await res.json();
     if(data.status === 'success'){
       _ordersLoaded = true;
@@ -2464,7 +2520,7 @@ document.getElementById('confirmStatusBtn').addEventListener('click', async () =
   btn.textContent = 'Saving…';
   try{
     const url = `${SHEET_WEBHOOK_URL}?action=updateStatus&billNo=${encodeURIComponent(_selectedBillNo)}&status=${encodeURIComponent(status)}`;
-    const res = await fetch(url);
+    const res = await fetchWithTimeout(url);
     const data = await res.json();
     if(data.status === 'success'){
       if(proofFile) uploadPaymentProof(_selectedBillNo, proofFile);
@@ -2488,7 +2544,7 @@ function uploadPaymentProof(billNo, file){
   const reader = new FileReader();
   reader.onload = () => {
     const base64 = reader.result.split(',')[1];
-    fetch(SHEET_WEBHOOK_URL, {
+    fetchWithTimeout(SHEET_WEBHOOK_URL, {
       method: 'POST',
       mode: 'no-cors',
       body: JSON.stringify({
@@ -2524,7 +2580,7 @@ document.getElementById('confirmFulfillmentBtn').addEventListener('click', async
   btn.textContent = 'Saving…';
   try{
     const url = `${SHEET_WEBHOOK_URL}?action=updateFulfillment&billNo=${encodeURIComponent(_fulfillmentOrder.billNo)}&fulfillmentStatus=${encodeURIComponent(status)}&trackingLink=${encodeURIComponent(trackingLink)}`;
-    const res = await fetch(url);
+    const res = await fetchWithTimeout(url);
     const data = await res.json();
     if(data.status === 'success'){
       document.getElementById('fulfillmentPanel').style.display = 'none';
@@ -2689,10 +2745,7 @@ function loadIngMatrix(){
       return;
     }
     try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 10000);
-      const res = await fetch(`${INGREDIENTS_WEBHOOK_URL}?action=matrix`, { signal: ctrl.signal });
-      clearTimeout(timer);
+      const res = await fetchWithTimeout(`${INGREDIENTS_WEBHOOK_URL}?action=matrix`, {}, 10000);
       const data = await res.json();
       if(data.status === 'success'){
         _ingMatrix = data.matrix;
@@ -2715,7 +2768,7 @@ async function loadIngOrders(){
   } else {
     document.getElementById('ingOrdersList').innerHTML = '<div class="orders-loading">Loading orders…</div>';
     try {
-      const res = await fetch(`${SHEET_WEBHOOK_URL}?action=orders&limit=200`);
+      const res = await fetchWithTimeout(`${SHEET_WEBHOOK_URL}?action=orders&limit=200`);
       const data = await res.json();
       allOrders = data.orders || [];
       if(!_ordersLoaded){ _ordersCache = allOrders; _ordersLoaded = true; }
