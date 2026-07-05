@@ -229,23 +229,13 @@
 
 <footer>CozyCatKitchen &mdash; Homemade with love 🐾</footer>
 
+<!-- Shared config + fetchWithTimeout() (also used by the main app). -->
+<script src="/config.js"></script>
 <script>
-const SHEET_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxAiGRuOVaN61HJe8szgTGQlA1iun-mjO-3MmhTYW1Jwnyzfc9ZKAmCR9f281-BrZV2/exec";
+// SHEET_WEBHOOK_URL and fetchWithTimeout() come from config.js above.
 
 function getParam(name){
   return new URLSearchParams(window.location.search).get(name) || '';
-}
-
-// Fetch with a hard timeout so a slow Apps Script cold-start can't leave a
-// customer staring at "Loading your order…" forever.
-async function fetchWithTimeout(resource, timeoutMs){
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs || 15000);
-  try {
-    return await fetch(resource, { signal: controller.signal });
-  } finally {
-    clearTimeout(timer);
-  }
 }
 
 // Best-effort: record load failures in the app's ErrorLog so customer-side
@@ -315,7 +305,7 @@ async function loadOrder(){
   }
   try{
     const url = `${SHEET_WEBHOOK_URL}?action=getOrderByBill&billNo=${encodeURIComponent(billNo)}&token=${encodeURIComponent(token)}`;
-    const res = await fetchWithTimeout(url, 15000);
+    const res = await fetchWithTimeout(url, {}, 15000);
     const data = await res.json();
     if(data.status !== 'success'){
       // Expected outcomes (bad/expired link, missing order) — not logged as errors.
