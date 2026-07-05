@@ -1130,7 +1130,8 @@ async function fetchWithTimeout(resource, options = {}, timeoutMs = DEFAULT_FETC
   }
 }
 
-function showErrorToast(message){
+function showErrorToast(message, opts){
+  opts = opts || {};
   let el = document.getElementById('globalErrorToast');
   if(!el){
     el = document.createElement('div');
@@ -1152,7 +1153,10 @@ function showErrorToast(message){
   }
   document.getElementById('globalErrorToastMsg').textContent = message;
   clearTimeout(el._hideTimer);
-  el._hideTimer = setTimeout(() => { if(el && el.parentNode) el.remove(); }, 8000);
+  // Persistent toasts (e.g. "bill not saved") stay until the user dismisses them.
+  if(!opts.persist){
+    el._hideTimer = setTimeout(() => { if(el && el.parentNode) el.remove(); }, 8000);
+  }
 }
 
 function reportClientError(err, context){
@@ -1668,13 +1672,30 @@ function logToSheet(data){
     shareToken: data.shareToken || '',
     auth: _authToken
   };
+  // Readable POST (text/plain avoids a CORS preflight) so we can CONFIRM the
+  // bill was actually saved. The old mode:'no-cors' hid every server-side
+  // failure — including an expired-token rejection — so a bill could render
+  // on screen and never reach the sheet with no warning at all.
   fetchWithTimeout(SHEET_WEBHOOK_URL, {
     method: 'POST',
-    mode: 'no-cors',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(payload)
+  }).then(res => res.json()).then(result => {
+    if(result && result.status === 'success') return; // saved — nothing to do
+    if(result && result.message === 'Unauthorized'){
+      forceRelogin();
+      showErrorToast(
+        `Bill ${data.billNo} was NOT saved — your session expired. Please sign in again and regenerate this bill.`,
+        { persist: true });
+      return;
+    }
+    showErrorToast(
+      `Bill ${data.billNo} may not have been saved (${(result && result.message) || 'unknown error'}). Please check the orders sheet before dispatching.`,
+      { persist: true });
   }).catch(() => {
-    setStatus('Bill generated, but could not reach the order log. Check your internet connection.', 'err');
+    showErrorToast(
+      `Bill ${data.billNo} was NOT saved to the order log (network error). The bill is still on screen — check your connection and regenerate it.`,
+      { persist: true });
   });
 }
 
