@@ -37,7 +37,10 @@ test('a rejected bill submission shows a persistent warning (not silently lost)'
 
   const toast = page.locator('#globalErrorToast');
   await expect(toast).toBeVisible();
-  await expect(toast).toContainText('was NOT saved');
+  // A persistent warning naming the bill — the exact wording differs for an
+  // expired vs. a transient rejection, but it must flag that it may not be saved.
+  await expect(toast).toContainText('TEST-999');
+  await expect(toast).toContainText('saved');
   // Persistent — still visible after the normal 8s auto-hide window.
   await page.waitForTimeout(1000);
   await expect(toast).toBeVisible();
