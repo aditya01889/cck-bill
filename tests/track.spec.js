@@ -51,3 +51,35 @@ test('a load failure shows a working Try-again button and is reported', async ({
   await expect(page.locator('#orderContent')).toBeVisible();
   await expect(page.locator('#tBillNo')).toHaveText('CCK-1');
 });
+
+// Fulfillment stepper — new statuses (Packed → Booked → Picked Up → Delivered)
+// and backward-compat for legacy orders stored as "Dispatched".
+function routeOrder(page, fulfillmentStatus) {
+  return page.route('**script.google.com**', (route) => {
+    if (route.request().url().includes('action=getOrderByBill')) {
+      return route.fulfill({ contentType: 'application/json',
+        body: JSON.stringify({ status: 'success', order: { ...ORDER, fulfillmentStatus } }) });
+    }
+    return route.fulfill({ contentType: 'application/json', body: '{"status":"success"}' });
+  });
+}
+
+test('stepper highlights the Booked stage', async ({ page }) => {
+  await routeOrder(page, 'Booked');
+  await page.goto('/track?bill=CCK-1&token=t');
+  await expect(page.locator('#stepPacked')).toHaveClass(/done/);
+  await expect(page.locator('#stepBooked')).toHaveClass(/active/);
+});
+
+test('stepper highlights Picked Up (multi-word status resolves correctly)', async ({ page }) => {
+  await routeOrder(page, 'Picked Up');
+  await page.goto('/track?bill=CCK-1&token=t');
+  await expect(page.locator('#stepPickedUp')).toHaveClass(/active/);
+  await expect(page.locator('#stepBooked')).toHaveClass(/done/);
+});
+
+test('legacy "Dispatched" order maps to the Picked Up stage', async ({ page }) => {
+  await routeOrder(page, 'Dispatched');
+  await page.goto('/track?bill=CCK-1&token=t');
+  await expect(page.locator('#stepPickedUp')).toHaveClass(/active/);
+});

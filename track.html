@@ -208,10 +208,15 @@
             <div class="step-dot">✓</div>
             <div class="step-label">Packed</div>
           </div>
-          <div class="step" id="stepDispatched">
+          <div class="step" id="stepBooked">
             <div class="step-line"></div>
             <div class="step-dot">✓</div>
-            <div class="step-label">Dispatched</div>
+            <div class="step-label">Booked</div>
+          </div>
+          <div class="step" id="stepPickedUp">
+            <div class="step-line"></div>
+            <div class="step-dot">✓</div>
+            <div class="step-label">Picked Up</div>
           </div>
           <div class="step" id="stepDelivered">
             <div class="step-line"></div>
@@ -267,7 +272,10 @@ function setPaymentBadge(status){
 }
 
 function setFulfillmentSteps(status){
-  const steps = ['Packed', 'Dispatched', 'Delivered'];
+  // Legacy orders used "Dispatched" for what is now the "Picked Up" stage.
+  if(status === 'Dispatched') status = 'Picked Up';
+  const steps = ['Packed', 'Booked', 'Picked Up', 'Delivered'];
+  const ids   = ['stepPacked', 'stepBooked', 'stepPickedUp', 'stepDelivered'];
   const idx = steps.indexOf(status);
   if(idx === -1){
     document.getElementById('tFulfillmentEmpty').style.display = '';
@@ -277,7 +285,7 @@ function setFulfillmentSteps(status){
   document.getElementById('tFulfillmentEmpty').style.display = 'none';
   document.getElementById('tStepsWrap').style.display = '';
   steps.forEach((s, i) => {
-    const el = document.getElementById('step' + s);
+    const el = document.getElementById(ids[i]);
     if(i < idx) el.classList.add('done');
     else if(i === idx) el.classList.add('active');
   });

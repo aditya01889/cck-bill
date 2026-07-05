@@ -241,7 +241,7 @@ function getOrderByBill(billNo, token) {
 }
 
 function updateFulfillment(billNo, fulfillmentStatus, trackingLink) {
-  var valid = ['Packed', 'Dispatched', 'Delivered'];
+  var valid = ['Packed', 'Booked', 'Picked Up', 'Delivered'];
   if (!billNo || valid.indexOf(fulfillmentStatus) === -1) {
     return jsonResponse({ status: 'error', message: 'Invalid bill number or fulfillment status' });
   }
@@ -558,7 +558,7 @@ function setupPaymentStatusDropdown() {
 function setupFulfillmentDropdown() {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   var rule = SpreadsheetApp.newDataValidation()
-    .requireValueInList(['Packed', 'Dispatched', 'Delivered'], true)
+    .requireValueInList(['Packed', 'Booked', 'Picked Up', 'Delivered'], true)
     .setAllowInvalid(false)
     .build();
   sheet.getRange('P2:P1000').setDataValidation(rule);
