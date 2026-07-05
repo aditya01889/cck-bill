@@ -18,6 +18,19 @@ test('global handler shows a toast on an unhandled rejection', async ({ page }) 
   await expect(toast).toHaveCount(0);
 });
 
+test('unhandled errors are reported to the backend error log', async ({ page }) => {
+  const reports = [];
+  await page.route('**script.google.com**', (route) => {
+    if (route.request().url().includes('action=clientError')) reports.push(route.request().url());
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ status: 'success' }) });
+  });
+  await page.goto('/');
+  await page.evaluate(() => { Promise.reject(new Error('boom-xyz-123')); });
+
+  await expect.poll(() => reports.length).toBeGreaterThan(0);
+  expect(reports.some((u) => u.includes('boom-xyz-123')), 'error message is included in the report').toBeTruthy();
+});
+
 test('fetchWithTimeout aborts a request that never responds', async ({ page }) => {
   // Leave the request hanging (never fulfilled) so only our timeout can end it.
   await page.route('**/hang.example/**', async () => { /* intentionally never responds */ });
