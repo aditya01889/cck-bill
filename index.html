@@ -1497,6 +1497,7 @@ document.getElementById('generateBtn').addEventListener('click', () => {
     mapLink, deliveryType,
     shareToken: lastShareToken
   });
+  invalidateOrders(); // a new bill was added — refetch so it appears in lists
 
   setStatus('', '');
 });
@@ -2030,7 +2031,8 @@ function openFulfillmentPanel(billNo){
 }
 
 function renderOrders(orders){
-  _ordersCache = orders;
+  // Note: does NOT write _ordersCache — that's owned solely by getOrders().
+  // (Previously this line let a search overwrite the cache with the filtered subset.)
   const el = document.getElementById('ordersList');
   if(!orders.length){
     el.innerHTML = '<div class="orders-empty">No orders found.</div>';
@@ -2151,24 +2153,50 @@ function closeOrderDetail(){
   document.getElementById('orderDetailOverlay').classList.remove('show');
 }
 
-function prefetchOrders(){
-  if(_ordersLoaded || !SHEET_WEBHOOK_URL) return _ordersLoadPromise;
+/* Single source of truth for the orders list.
+   - Dedupes concurrent callers (they share one in-flight request).
+   - Caches the result; later callers resolve instantly.
+   - Handles the auth token and Unauthorized -> re-login.
+   Resolves to the orders array; rejects on network/backend failure so each
+   caller can render its own error UI. This replaces three separate fetches
+   (prefetch / orders tab / ingredients tab) that each cached and errored
+   differently. */
+function getOrders(){
+  if(_ordersLoaded) return Promise.resolve(_ordersCache);
+  if(!SHEET_WEBHOOK_URL) return Promise.resolve([]);
   if(_ordersLoadPromise) return _ordersLoadPromise;
   _ordersLoadPromise = (async () => {
-    try{
+    try {
       const res = await fetchWithTimeout(authUrl(`${SHEET_WEBHOOK_URL}?action=orders&limit=200`));
       const data = await res.json();
-      if(data.message === 'Unauthorized'){ forceRelogin(); return; }
-      if(data.status === 'success'){
-        _ordersCache = data.orders || [];
-        _ordersLoaded = true;
-        if(document.getElementById('tab-dashboard').classList.contains('active')){
-          renderDashboard(_ordersCache);
-        }
-      }
-    }catch(e){ /* silent — loadOrders/loadDashboard handle their own errors */ }
+      if(data.message === 'Unauthorized'){ forceRelogin(); throw new Error('Unauthorized'); }
+      if(data.status !== 'success') throw new Error(data.message || 'Failed to load orders');
+      _ordersCache = data.orders || [];
+      _ordersLoaded = true;
+      return _ordersCache;
+    } finally {
+      // Clear the in-flight handle so a failed load can be retried.
+      _ordersLoadPromise = null;
+    }
   })();
   return _ordersLoadPromise;
+}
+
+// Drop the cache so the next getOrders() refetches — call after any change
+// that mutates order data on the server (status/fulfillment update, new bill).
+function invalidateOrders(){
+  _ordersLoaded = false;
+  _ordersLoadPromise = null;
+}
+
+// Warm the cache in the background (called on login). Renders the dashboard if
+// it's the active tab once data arrives; visible loaders show their own errors.
+function prefetchOrders(){
+  return getOrders().then(orders => {
+    if(document.getElementById('tab-dashboard').classList.contains('active')){
+      renderDashboard(orders);
+    }
+  }).catch(() => { /* silent — loadOrders/loadDashboard surface their own errors */ });
 }
 
 async function prefetchCustomers(){
@@ -2273,12 +2301,18 @@ function parseItemsFull(summary){
   }).filter(Boolean);
 }
 
-function loadDashboard(){
+async function loadDashboard(){
   if(_ordersLoaded){
     renderDashboard(_ordersCache);
-  } else {
-    document.getElementById('dashLoading').style.display = 'block';
-    document.getElementById('dashContent').style.display = 'none';
+    return;
+  }
+  document.getElementById('dashLoading').style.display = 'block';
+  document.getElementById('dashContent').style.display = 'none';
+  try {
+    renderDashboard(await getOrders());
+  } catch(e){
+    if(e.message === 'Unauthorized') return; // forceRelogin already handled it
+    document.getElementById('dashLoading').textContent = 'Could not load dashboard. Check your connection.';
   }
 }
 
@@ -2518,32 +2552,24 @@ async function loadOrders(search){
     document.getElementById('ordersList').innerHTML = '<div class="orders-empty">Sheet logging is not configured.</div>';
     return;
   }
-  // Use in-memory cache for instant display (with optional client-side search)
-  if(_ordersLoaded && _ordersCache.length){
-    const orders = search
-      ? _ordersCache.filter(o => {
-          const s = search.toLowerCase();
-          return String(o.billNo).toLowerCase().includes(s) || String(o.name).toLowerCase().includes(s);
-        })
-      : _ordersCache;
-    renderOrders(orders);
+  // Only show the spinner for a genuine fetch — a cache hit renders instantly.
+  if(!_ordersLoaded){
+    document.getElementById('ordersList').innerHTML = '<div class="orders-loading">Loading…</div>';
+  }
+  let orders;
+  try {
+    orders = await getOrders();
+  } catch(e){
+    if(e.message === 'Unauthorized') return; // forceRelogin already handled it
+    document.getElementById('ordersList').innerHTML = '<div class="orders-empty">Could not load orders. Check your connection.</div>';
     return;
   }
-  document.getElementById('ordersList').innerHTML = '<div class="orders-loading">Loading…</div>';
-  try{
-    const res = await fetchWithTimeout(authUrl(`${SHEET_WEBHOOK_URL}?action=orders&limit=200`));
-    const data = await res.json();
-    if(data.message === 'Unauthorized'){ forceRelogin(); return; }
-    if(data.status === 'success'){
-      _ordersLoaded = true;
-      _ordersCache = data.orders || [];
-      renderOrders(_ordersCache);
-    } else {
-      document.getElementById('ordersList').innerHTML = `<div class="orders-empty">Error: ${escapeHtml(data.message||'Unknown error')}</div>`;
-    }
-  }catch(e){
-    document.getElementById('ordersList').innerHTML = '<div class="orders-empty">Could not load orders. Check your connection.</div>';
+  if(search){
+    const s = search.toLowerCase();
+    orders = orders.filter(o =>
+      String(o.billNo).toLowerCase().includes(s) || String(o.name).toLowerCase().includes(s));
   }
+  renderOrders(orders);
 }
 
 function toggleProofSection(status){
@@ -2596,6 +2622,7 @@ document.getElementById('confirmStatusBtn').addEventListener('click', async () =
       document.getElementById('proofFileInput').value = '';
       document.getElementById('proofFileName').textContent = '';
       _selectedBillNo = null;
+      invalidateOrders(); // status changed on the server — refetch fresh data
       loadOrders(document.getElementById('orderSearch').value.trim());
     } else {
       alert('Error: ' + (data.message || 'Could not update status.'));
@@ -2655,6 +2682,7 @@ document.getElementById('confirmFulfillmentBtn').addEventListener('click', async
       document.getElementById('fulfillmentPanel').style.display = 'none';
       document.getElementById('dispatchWorkflow').innerHTML = '';
       _fulfillmentOrder = null;
+      invalidateOrders(); // fulfillment changed on the server — refetch fresh data
       loadOrders(document.getElementById('orderSearch').value.trim());
     } else {
       alert('Error: ' + (data.message || 'Could not update fulfillment.'));
@@ -2834,21 +2862,16 @@ function loadIngMatrix(){
 
 async function loadIngOrders(){
   const packed = new Set(['Packed', 'Dispatched', 'Delivered']);
-  let allOrders;
-  if(_ordersLoaded && _ordersCache.length){
-    allOrders = _ordersCache;
-  } else {
+  if(!_ordersLoaded){
     document.getElementById('ingOrdersList').innerHTML = '<div class="orders-loading">Loading orders…</div>';
-    try {
-      const res = await fetchWithTimeout(authUrl(`${SHEET_WEBHOOK_URL}?action=orders&limit=200`));
-      const data = await res.json();
-      if(data.message === 'Unauthorized'){ forceRelogin(); return; }
-      allOrders = data.orders || [];
-      if(!_ordersLoaded){ _ordersCache = allOrders; _ordersLoaded = true; }
-    } catch(e){
-      document.getElementById('ingOrdersList').innerHTML = '<div class="orders-loading">Failed to load orders.</div>';
-      return;
-    }
+  }
+  let allOrders;
+  try {
+    allOrders = await getOrders();
+  } catch(e){
+    if(e.message === 'Unauthorized') return; // forceRelogin already handled it
+    document.getElementById('ingOrdersList').innerHTML = '<div class="orders-loading">Failed to load orders.</div>';
+    return;
   }
   _ingOrders = allOrders.filter(o =>
     o.paymentStatus === 'Paid' && !packed.has(String(o.fulfillmentStatus || '').trim())
