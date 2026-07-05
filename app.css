@@ -592,6 +592,8 @@
     background:var(--cream);color:var(--muted);border:1px solid var(--line);
   }
   .fulfillment-badge.packed{background:#FFF8EC;color:#9C7A2E;border-color:#F0DC9A;}
+  .fulfillment-badge.booked{background:#E9F6F5;color:#2E7D77;border-color:#B6E0DC;}
+  .fulfillment-badge.pickedup{background:#EEF3FF;color:#3A5BC7;border-color:#B8C8F0;}
   .fulfillment-badge.dispatched{background:#EEF3FF;color:#3A5BC7;border-color:#B8C8F0;}
   .fulfillment-badge.delivered{background:#E8F5EE;color:#3D7A4D;border-color:#B8DEC7;}
 

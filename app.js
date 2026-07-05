@@ -808,7 +808,9 @@ function fulfillmentBadgeClass(s){
   if(!s) return '';
   const l = s.toLowerCase();
   if(l === 'packed') return 'packed';
-  if(l === 'dispatched') return 'dispatched';
+  if(l === 'booked') return 'booked';
+  if(l === 'picked up') return 'pickedup';
+  if(l === 'dispatched') return 'dispatched'; // legacy orders (pre "Picked Up")
   if(l === 'delivered') return 'delivered';
   return '';
 }
@@ -922,10 +924,13 @@ function renderNationalDispatch(container, o){
 
 function updateFulfillmentUI(){
   const status = document.getElementById('fulfillmentSelect').value;
-  const showTracking = status === 'Dispatched' || status === 'Delivered';
+  // Tracking/consignment number can exist once the booking is made onward.
+  const showTracking = status === 'Booked' || status === 'Picked Up' || status === 'Delivered';
   document.getElementById('trackingLinkField').style.display = showTracking ? 'block' : 'none';
+  // The shipping-partner pickup request is generated when you BOOK the shipment
+  // (this is the request to book a consignment — the package hasn't moved yet).
   const workflow = document.getElementById('dispatchWorkflow');
-  if(status !== 'Dispatched' || !_fulfillmentOrder){
+  if(status !== 'Booked' || !_fulfillmentOrder){
     workflow.innerHTML = '';
     return;
   }
@@ -1780,7 +1785,7 @@ function loadIngMatrix(){
 }
 
 async function loadIngOrders(){
-  const packed = new Set(['Packed', 'Dispatched', 'Delivered']);
+  const packed = new Set(['Packed', 'Booked', 'Picked Up', 'Dispatched', 'Delivered']);
   if(!_ordersLoaded){
     document.getElementById('ingOrdersList').innerHTML = '<div class="orders-loading">Loading orders…</div>';
   }
