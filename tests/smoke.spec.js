@@ -1,4 +1,5 @@
 const { test, expect } = require('@playwright/test');
+const { mockBackend, login } = require('./helpers');
 
 test('login screen loads', async ({ page }) => {
   await page.goto('/');
@@ -7,10 +8,9 @@ test('login screen loads', async ({ page }) => {
 });
 
 test('Aditya login → dashboard', async ({ page }) => {
+  await mockBackend(page);
   await page.goto('/');
-  await page.fill('#loginUser', 'Aditya');
-  await page.fill('#loginPass', 'Admin0604');
-  await page.click('#loginBtn');
+  await login(page, 'Aditya');
   await expect(page.locator('#tab-dashboard')).toBeVisible();
   await expect(page).toHaveURL(/\/dashboard/);
   // Ingredients tab visible for Aditya
@@ -18,10 +18,9 @@ test('Aditya login → dashboard', async ({ page }) => {
 });
 
 test('Priyanka login → ebill', async ({ page }) => {
+  await mockBackend(page);
   await page.goto('/');
-  await page.fill('#loginUser', 'Priyanka');
-  await page.fill('#loginPass', 'Admin3001');
-  await page.click('#loginBtn');
+  await login(page, 'Priyanka');
   await expect(page.locator('#tab-newbill')).toBeVisible();
   await expect(page).toHaveURL(/\/ebill/);
   // Ingredients tab hidden for Priyanka
@@ -29,6 +28,7 @@ test('Priyanka login → ebill', async ({ page }) => {
 });
 
 test('wrong password shows error', async ({ page }) => {
+  await mockBackend(page);
   await page.goto('/');
   await page.fill('#loginUser', 'Aditya');
   await page.fill('#loginPass', 'wrongpass');
@@ -38,10 +38,10 @@ test('wrong password shows error', async ({ page }) => {
 });
 
 test('tab navigation updates URL', async ({ page }) => {
+  await mockBackend(page);
   await page.goto('/');
-  await page.fill('#loginUser', 'Aditya');
-  await page.fill('#loginPass', 'Admin0604');
-  await page.click('#loginBtn');
+  await login(page, 'Aditya');
+  await expect(page.locator('#tab-dashboard')).toBeVisible();
   await page.click('#tabOrders');
   await expect(page).toHaveURL(/\/orders/);
   await page.click('#tabNewBill');
