@@ -2845,7 +2845,7 @@ function loadIngMatrix(){
       return;
     }
     try {
-      const res = await fetchWithTimeout(`${INGREDIENTS_WEBHOOK_URL}?action=matrix`, {}, 10000);
+      const res = await fetchWithTimeout(authUrl(`${INGREDIENTS_WEBHOOK_URL}?action=matrix`), {}, 10000);
       const data = await res.json();
       if(data.status === 'success'){
         _ingMatrix = data.matrix;

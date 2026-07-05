@@ -5,8 +5,64 @@
 
 function doGet(e) {
   var action = (e && e.parameter) ? e.parameter.action : null;
-  if (action === 'matrix') return getIngredientMatrix();
+  if (action === 'matrix') {
+    // Requires a valid session token issued by the main app's login.
+    if (!verifyToken_(e && e.parameter ? e.parameter.auth : null)) {
+      return jsonResponse({ status: 'error', message: 'Unauthorized' });
+    }
+    return getIngredientMatrix();
+  }
   return ContentService.createTextOutput('CCK Ingredient Calculator running.');
+}
+
+/* ============================================================
+ * AUTH (verify only)
+ * ------------------------------------------------------------
+ * This web app only *verifies* session tokens minted by the main
+ * app (AppsScript.gs). For that to work, this project's Script
+ * Properties must contain a SERVER_SECRET with the SAME value as
+ * the main project. Set it once via Project Settings ▸ Script
+ * Properties (copy the value from the main project) — see
+ * SECURITY_SETUP.md.
+ * ============================================================ */
+function getServerSecret_() {
+  var s = PropertiesService.getScriptProperties().getProperty('SERVER_SECRET');
+  if (!s) throw new Error('SERVER_SECRET is not set on the Ingredient Calculator project.');
+  return s;
+}
+
+function b64url_(bytes) {
+  return Utilities.base64EncodeWebSafe(bytes).replace(/=+$/, '');
+}
+
+function b64urlDecodeStr_(s) {
+  return Utilities.newBlob(Utilities.base64DecodeWebSafe(s)).getDataAsString();
+}
+
+function hmac_(message) {
+  return b64url_(Utilities.computeHmacSha256Signature(message, getServerSecret_()));
+}
+
+function constantEquals_(a, b) {
+  a = String(a); b = String(b);
+  if (a.length !== b.length) return false;
+  var r = 0;
+  for (var i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return r === 0;
+}
+
+function verifyToken_(token) {
+  if (!token) return null;
+  var parts = String(token).split('.');
+  if (parts.length !== 2) return null;
+  try {
+    if (!constantEquals_(parts[1], hmac_(parts[0]))) return null;
+    var payload = JSON.parse(b64urlDecodeStr_(parts[0]));
+    if (!payload || !payload.exp || Date.now() > payload.exp) return null;
+    return payload; // { u, r, exp }
+  } catch (err) {
+    return null;
+  }
 }
 
 function getIngredientMatrix() {
