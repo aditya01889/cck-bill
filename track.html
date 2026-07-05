@@ -236,6 +236,37 @@ function getParam(name){
   return new URLSearchParams(window.location.search).get(name) || '';
 }
 
+// Fetch with a hard timeout so a slow Apps Script cold-start can't leave a
+// customer staring at "Loading your order…" forever.
+async function fetchWithTimeout(resource, timeoutMs){
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs || 15000);
+  try {
+    return await fetch(resource, { signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Best-effort: record load failures in the app's ErrorLog so customer-side
+// problems are visible to us. Public GET (no auth — customers aren't logged in),
+// capped per page load so a customer retrying can't flood the log.
+let _trackErrCount = 0;
+function reportTrackError(message, billNo){
+  try {
+    if(!SHEET_WEBHOOK_URL || _trackErrCount >= 5) return;
+    _trackErrCount++;
+    const params = new URLSearchParams({
+      action: 'clientError',
+      message: String(message || '').slice(0, 300),
+      context: 'track',
+      url: '/track?bill=' + billNo,
+      ua: (navigator.userAgent || '').slice(0, 200)
+    });
+    fetch(`${SHEET_WEBHOOK_URL}?${params.toString()}`).catch(() => {});
+  } catch(_){ /* never let error reporting cause another error */ }
+}
+
 function setPaymentBadge(status){
   const el = document.getElementById('tPaymentBadge');
   el.textContent = status || '—';
@@ -284,14 +315,17 @@ async function loadOrder(){
   }
   try{
     const url = `${SHEET_WEBHOOK_URL}?action=getOrderByBill&billNo=${encodeURIComponent(billNo)}&token=${encodeURIComponent(token)}`;
-    const res = await fetch(url);
+    const res = await fetchWithTimeout(url, 15000);
     const data = await res.json();
     if(data.status !== 'success'){
+      // Expected outcomes (bad/expired link, missing order) — not logged as errors.
       showError(data.message === 'Invalid link' ? 'This link is invalid or has expired.' : 'Order not found.');
       return;
     }
     renderOrder(data.order);
   }catch(e){
+    // Network failure or timeout — record it and let the customer retry.
+    reportTrackError((e && e.message) || String(e), billNo);
     showError('Could not load your order. Please check your connection and try again.');
   }
 }
@@ -327,8 +361,23 @@ function renderOrder(o){
 function showError(msg){
   document.getElementById('stateLoading').style.display = 'none';
   const el = document.getElementById('stateError');
-  el.textContent = msg;
   el.style.display = '';
+  el.innerHTML = '';
+  const m = document.createElement('div');
+  m.textContent = msg;
+  el.appendChild(m);
+  const btn = document.createElement('button');
+  btn.id = 'retryBtn';
+  btn.textContent = 'Try again';
+  btn.style.cssText = 'margin-top:14px;background:var(--rust-deep);color:#fff;' +
+    "font-family:'Quicksand',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.06em;" +
+    'text-transform:uppercase;padding:10px 20px;border:none;border-radius:8px;cursor:pointer;';
+  btn.onclick = () => {
+    el.style.display = 'none';
+    document.getElementById('stateLoading').style.display = '';
+    loadOrder();
+  };
+  el.appendChild(btn);
 }
 
 loadOrder();
