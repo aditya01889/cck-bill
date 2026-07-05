@@ -1,4 +1,5 @@
 const { test, expect } = require('@playwright/test');
+const { makeToken } = require('./helpers');
 
 // Regression test for the "Ingredients stuck on Loading orders…" bug on refresh.
 //
@@ -44,15 +45,18 @@ test('ingredients tab renders orders after refresh', async ({ page }) => {
   page.on('pageerror', (e) => errors.push(e.message));
 
   await mockBackends(page);
-  // Seed the logged-in session and surface unhandled rejections (the TDZ error
-  // manifested as one, not as a page error) before any app script runs.
-  await page.addInitScript(() => {
+  // Seed the logged-in session (username + valid token) and surface unhandled
+  // rejections (the TDZ error manifested as one, not a page error) before any
+  // app script runs.
+  const token = makeToken('Aditya', 'admin');
+  await page.addInitScript((tok) => {
     sessionStorage.setItem('cck_user', 'Aditya');
+    sessionStorage.setItem('cck_token', tok);
     window.addEventListener('unhandledrejection', (e) => {
       window.__rejections = window.__rejections || [];
       window.__rejections.push(String(e.reason && (e.reason.message || e.reason)));
     });
-  });
+  }, token);
 
   // Load directly on /ingredients while logged in — the exact refresh case.
   await page.goto('/ingredients');
