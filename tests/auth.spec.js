@@ -42,24 +42,17 @@ test('the ingredient matrix request carries the auth token', async ({ page }) =>
   }
 });
 
-test('an Unauthorized response sends the user back to login', async ({ page }) => {
-  // Seed a logged-in session, but make the backend reject as if the token expired.
-  const token = makeToken('Aditya', 'admin');
+test('an expired session shows the login screen (and clears the token)', async ({ page }) => {
+  // Seed a session whose token has already expired.
+  const expired = makeToken('Aditya', 'admin', -1000); // exp in the past
   await page.addInitScript((tok) => {
     sessionStorage.setItem('cck_user', 'Aditya');
     sessionStorage.setItem('cck_token', tok);
-  }, token);
-  await page.route('**script.google.com**', (route) => {
-    const url = route.request().url();
-    if (url.includes('action=matrix')) {
-      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ status: 'success', matrix: {}, ingredients: [] }) });
-    }
-    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ status: 'error', message: 'Unauthorized' }) });
-  });
+  }, expired);
 
   await page.goto('/orders');
-  // forceRelogin() should clear the session and show the login screen again.
+  // checkLogin() rejects the expired token up front — login screen, no data call.
   await expect(page.locator('#loginScreen')).toBeVisible();
   const token2 = await page.evaluate(() => sessionStorage.getItem('cck_token'));
-  expect(token2, 'session token was cleared').toBeFalsy();
+  expect(token2, 'expired session token was cleared').toBeFalsy();
 });

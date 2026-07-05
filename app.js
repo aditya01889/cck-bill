@@ -581,10 +581,18 @@ function logToSheet(data){
   }).then(res => res.json()).then(result => {
     if(result && result.status === 'success') return; // saved — nothing to do
     if(result && result.message === 'Unauthorized'){
-      forceRelogin();
-      showErrorToast(
-        `Bill ${data.billNo} was NOT saved — your session expired. Please sign in again and regenerate this bill.`,
-        { persist: true });
+      if(!tokenValid(_authToken)){
+        // Genuinely expired — send them to log in and regenerate.
+        forceRelogin();
+        showErrorToast(
+          `Bill ${data.billNo} was NOT saved — your session expired. Please sign in again and regenerate this bill.`,
+          { persist: true });
+      } else {
+        // Token still valid — a transient backend rejection. Don't log them out.
+        showErrorToast(
+          `Bill ${data.billNo} may not have been saved (server was busy). Please check the orders sheet before dispatching.`,
+          { persist: true });
+      }
       return;
     }
     showErrorToast(
@@ -1080,17 +1088,15 @@ function closeOrderDetail(){
    caller can render its own error UI. This replaces three separate fetches
    (prefetch / orders tab / ingredients tab) that each cached and errored
    differently. */
+const _sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
 function getOrders(){
   if(_ordersLoaded) return Promise.resolve(_ordersCache);
   if(!SHEET_WEBHOOK_URL) return Promise.resolve([]);
   if(_ordersLoadPromise) return _ordersLoadPromise;
   _ordersLoadPromise = (async () => {
     try {
-      const res = await fetchWithTimeout(authUrl(`${SHEET_WEBHOOK_URL}?action=orders&limit=200`));
-      const data = await res.json();
-      if(data.message === 'Unauthorized'){ forceRelogin(); throw new Error('Unauthorized'); }
-      if(data.status !== 'success') throw new Error(data.message || 'Failed to load orders');
-      _ordersCache = data.orders || [];
+      _ordersCache = await fetchOrdersWithRetry();
       _ordersLoaded = true;
       return _ordersCache;
     } finally {
@@ -1099,6 +1105,38 @@ function getOrders(){
     }
   })();
   return _ordersLoadPromise;
+}
+
+// Google Apps Script spins the web app down when idle, so the first request
+// after a lull ("cold start") can take 10-30s and occasionally comes back with
+// a transient error. Give each attempt a generous timeout and retry with
+// backoff, so a cold start recovers on its own instead of showing an empty
+// dashboard that needs a manual refresh.
+async function fetchOrdersWithRetry(){
+  const backoffs = [1500, 4000]; // waits between the (up to) 3 attempts
+  let lastErr;
+  for(let attempt = 0; attempt <= backoffs.length; attempt++){
+    try {
+      const res = await fetchWithTimeout(authUrl(`${SHEET_WEBHOOK_URL}?action=orders&limit=200`), {}, 30000);
+      const data = await res.json();
+      if(data.message === 'Unauthorized'){
+        // Only log out if the token has ACTUALLY expired. A backend that says
+        // "unauthorized" while our token is still valid is a transient cold-start
+        // hiccup — retry rather than nuking a good session and bouncing to login.
+        if(!tokenValid(_authToken)){ forceRelogin(); throw new Error('Unauthorized'); }
+        lastErr = new Error('Unauthorized (transient)');
+      } else if(data.status === 'success'){
+        return data.orders || [];
+      } else {
+        lastErr = new Error(data.message || 'Failed to load orders');
+      }
+    } catch(e){
+      if(e.message === 'Unauthorized') throw e; // genuine expiry — stop, already handled
+      lastErr = e; // network / timeout / parse error — retry
+    }
+    if(attempt < backoffs.length) await _sleep(backoffs[attempt]);
+  }
+  throw lastErr || new Error('Failed to load orders');
 }
 
 // Drop the cache so the next getOrders() refetches — call after any change

@@ -1,0 +1,28 @@
+name: Keep backend warm
+
+# Google Apps Script spins its web app down when idle, so the first request
+# after a lull is slow (a "cold start", 10-30s) — which is why the dashboard
+# sometimes lags right after login. This pings the endpoint on a schedule so the
+# backend stays warm during working hours and login feels instant.
+#
+# The ping hits the base URL with no action, which returns a harmless "running"
+# string and needs no auth. Keep the URL below in sync with SHEET_WEBHOOK_URL in
+# config.js (it is already public in the client, so it is not a secret).
+#
+# Note: GitHub's scheduled runs are best-effort and can be delayed under load,
+# so this reduces cold starts rather than eliminating them entirely.
+
+on:
+  schedule:
+    # ~every 5 minutes, roughly 08:30-22:30 IST (cron is UTC; IST = UTC+5:30)
+    - cron: '*/5 3-17 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Apps Script web app
+        run: |
+          curl -s -o /dev/null -w 'ping status: %{http_code}\n' --max-time 60 \
+            "https://script.google.com/macros/s/AKfycbxAiGRuOVaN61HJe8szgTGQlA1iun-mjO-3MmhTYW1Jwnyzfc9ZKAmCR9f281-BrZV2/exec" || true
