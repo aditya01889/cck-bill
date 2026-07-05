@@ -26,6 +26,22 @@ test('guarded data requests carry the auth token', async ({ page }) => {
   }
 });
 
+test('the ingredient matrix request carries the auth token', async ({ page }) => {
+  await mockBackend(page);
+  const matrixReqs = [];
+  page.on('request', (r) => { if (r.url().includes('action=matrix')) matrixReqs.push(r.url()); });
+
+  await page.goto('/');
+  await login(page, 'Aditya');
+  await page.click('#tabIngredients');
+  await expect(page.locator('#tab-ingredients')).toBeVisible();
+  await expect.poll(() => matrixReqs.length).toBeGreaterThan(0);
+
+  for (const u of matrixReqs) {
+    expect(u, 'every matrix request includes an auth param').toContain('auth=');
+  }
+});
+
 test('an Unauthorized response sends the user back to login', async ({ page }) => {
   // Seed a logged-in session, but make the backend reject as if the token expired.
   const token = makeToken('Aditya', 'admin');
