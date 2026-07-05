@@ -5,5 +5,13 @@
     { "source": "/ebill",       "destination": "/" },
     { "source": "/orders",      "destination": "/" },
     { "source": "/ingredients", "destination": "/" }
+  ],
+  "headers": [
+    {
+      "source": "/(app.js|app.css)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+      ]
+    }
   ]
 }
