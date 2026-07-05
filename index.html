@@ -1159,11 +1159,30 @@ function showErrorToast(message, opts){
   }
 }
 
+let _errorReportCount = 0;
 function reportClientError(err, context){
   console.error('[CCK] Unhandled error' + (context ? ' (' + context + ')' : '') + ':', err);
   // Aborted fetches (timeouts) already surface their own inline message — don't double-report.
   if(err && err.name === 'AbortError') return;
   try { showErrorToast('Something went wrong. Please try again — details are in the console.'); } catch(_){}
+  // Best-effort: record it server-side (ErrorLog sheet) so silent failures leave
+  // a trail. GET so an older backend without this endpoint is a harmless no-op;
+  // capped per page load and fully swallowed so logging can never loop or throw.
+  try {
+    if(SHEET_WEBHOOK_URL && _errorReportCount < 20){
+      _errorReportCount++;
+      const params = new URLSearchParams({
+        action: 'clientError',
+        message: ((err && (err.message || err)) || '').toString().slice(0, 300),
+        context: (context || '').slice(0, 120),
+        url: location.pathname,
+        ua: (navigator.userAgent || '').slice(0, 200),
+        user: currentUser || '',
+        auth: _authToken || ''
+      });
+      fetchWithTimeout(`${SHEET_WEBHOOK_URL}?${params.toString()}`).catch(() => {});
+    }
+  } catch(_){ /* never let error reporting cause another error */ }
 }
 
 window.addEventListener('error', e => reportClientError(e.error || e.message, 'window.onerror'));

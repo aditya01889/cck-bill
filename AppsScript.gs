@@ -80,6 +80,14 @@ function doGet(e) {
     return getOrderByBill(e.parameter.billNo || '', e.parameter.token || '');
   }
 
+  // Public endpoint: the app reports client-side errors here. Kept public so
+  // failures that happen before/without login are still captured. Using GET
+  // also means an older deployment that doesn't know this action just returns
+  // its default text — never a spurious write.
+  if (action === 'clientError') {
+    return logClientError_(e.parameter);
+  }
+
   // Everything below reads or writes business data (incl. customer PII) and
   // requires a valid session token (issued by the login action).
   var PROTECTED = { orders: 1, customers: 1, updateStatus: 1, updateFulfillment: 1 };
@@ -555,4 +563,88 @@ function setupFulfillmentDropdown() {
     .build();
   sheet.getRange('P2:P1000').setDataValidation(rule);
   Logger.log('Fulfillment Status dropdown applied to P2:P1000');
+}
+
+/* ============================================================
+ * CLIENT ERROR LOG
+ * ------------------------------------------------------------
+ * The web app reports uncaught errors / unhandled rejections to
+ * ?action=clientError. They land in an "ErrorLog" sheet tab so
+ * silent client-side failures leave a durable trail. Capped at
+ * the most recent 500 rows.
+ * ============================================================ */
+function logClientError_(p) {
+  try {
+    p = p || {};
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sh = ss.getSheetByName('ErrorLog');
+    if (!sh) {
+      sh = ss.insertSheet('ErrorLog');
+      sh.appendRow(['Timestamp', 'User', 'Message', 'Context', 'Path', 'UserAgent']);
+    }
+    // If a valid token was sent, trust it for the username; otherwise fall back
+    // to whatever the client claimed (best-effort, logged-out case).
+    var payload = verifyToken_(p.auth);
+    var user = payload ? payload.u : (p.user || '');
+    sh.appendRow([
+      new Date(),
+      String(user).slice(0, 60),
+      String(p.message || '').slice(0, 500),
+      String(p.context || '').slice(0, 120),
+      String(p.url || '').slice(0, 200),
+      String(p.ua || '').slice(0, 300)
+    ]);
+    // Keep only the most recent 500 entries (row 1 is the header).
+    var extra = sh.getLastRow() - 501;
+    if (extra > 0) sh.deleteRows(2, extra);
+    return jsonResponse({ status: 'success' });
+  } catch (err) {
+    return jsonResponse({ status: 'error', message: err.toString() });
+  }
+}
+
+/* ============================================================
+ * AUTOMATED BACKUP
+ * ------------------------------------------------------------
+ * Makes a timestamped copy of this whole spreadsheet (orders +
+ * Customers + everything) into a "CCK Backups" Drive folder, and
+ * keeps the most recent 30. Protects the single source of truth
+ * from accidental deletion/corruption.
+ *
+ * ONE-TIME SETUP: run setupBackupTrigger() once from the editor
+ * (grant Drive permission when prompted). It installs a daily
+ * trigger; you can also run backupSpreadsheet() by hand any time.
+ * ============================================================ */
+var BACKUP_FOLDER = 'CCK Backups';
+var BACKUP_KEEP = 30;
+
+function backupSpreadsheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var file = DriveApp.getFileById(ss.getId());
+  var folders = DriveApp.getFoldersByName(BACKUP_FOLDER);
+  var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(BACKUP_FOLDER);
+  var stamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd_HH-mm');
+  file.makeCopy('CCK backup ' + stamp, folder);
+  pruneBackups_(folder, BACKUP_KEEP);
+}
+
+function pruneBackups_(folder, keep) {
+  var files = [];
+  var it = folder.getFiles();
+  while (it.hasNext()) files.push(it.next());
+  files.sort(function (a, b) { return b.getDateCreated() - a.getDateCreated(); });
+  for (var i = keep; i < files.length; i++) files[i].setTrashed(true);
+}
+
+function setupBackupTrigger() {
+  // Remove any existing backup triggers so re-running doesn't stack duplicates.
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'backupSpreadsheet') {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+  ScriptApp.newTrigger('backupSpreadsheet').timeBased().everyDays(1).atHour(2).create();
+  backupSpreadsheet(); // take one immediately so there's a backup right away
+  Logger.log('Daily backup trigger installed (runs ~2am) and a first backup was created.');
 }
