@@ -1247,11 +1247,23 @@ async function prefetchCustomers(){
 const _MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 function parseOrderMonth(dateStr){
-  const m = String(dateStr||'').match(/(\d{1,2})\s+(\w{3})\s+(\d{4})/);
-  if(!m) return null;
-  const mi = _MON.indexOf(m[2]);
-  if(mi === -1) return null;
-  return { year: parseInt(m[3],10), month: mi };
+  const s = String(dateStr||'').trim();
+  if(!s) return null;
+  // Primary: the "D MMM YYYY" text the app writes (e.g. "5 Jul 2026, 2:30 pm").
+  // Tolerate a full month name too ("5 July 2026") and any letter case.
+  const m = s.match(/(\d{1,2})\s+([A-Za-z]{3})[A-Za-z]*\s+(\d{4})/);
+  if(m){
+    const abbr = m[2].charAt(0).toUpperCase() + m[2].slice(1, 3).toLowerCase();
+    const mi = _MON.indexOf(abbr);
+    if(mi !== -1) return { year: parseInt(m[3], 10), month: mi };
+  }
+  // Fallback: a value the browser can parse as a date — e.g. an ISO string if
+  // Google Sheets stored the Date column as a real date ("2026-07-05T..."), or
+  // "2026-07-05". Guarded so non-dates return null. This is what previously made
+  // an affected month silently show ₹0 on the trend.
+  const d = new Date(s);
+  if(!isNaN(d.getTime())) return { year: d.getFullYear(), month: d.getMonth() };
+  return null;
 }
 
 function parseItemsFull(summary){
