@@ -150,7 +150,7 @@ function getOrders(search, limit) {
 }
 
 function updateStatus(billNo, status) {
-  var valid = ['Pending', 'Paid', 'Partially Paid', 'Refunded', 'Failed', 'Cancelled'];
+  var valid = ['Pending', 'Paid', 'Refunded', 'Failed', 'Cancelled'];
   if (!billNo || valid.indexOf(status) === -1) {
     return jsonResponse({ status: 'error', message: 'Invalid bill number or status' });
   }
@@ -537,7 +537,7 @@ function migrateCustomersFromOrders() {
  */
 function setupPaymentStatusDropdown() {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  var statusOptions = ['Pending', 'Paid', 'Partially Paid', 'Refunded', 'Failed', 'Cancelled'];
+  var statusOptions = ['Pending', 'Paid', 'Refunded', 'Failed', 'Cancelled'];
 
   var rule = SpreadsheetApp.newDataValidation()
     .requireValueInList(statusOptions, true)

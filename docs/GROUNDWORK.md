@@ -129,11 +129,60 @@ modules. Likely 1–2 PRs, each test-green before merge.
 
 Feature-specific prerequisites:
 - **Product & price management, user management** → need Phase 4 (Settings).
-- **Edit bill, discount, tax, partial-payment balance, inventory** → need
-  Phase 2 (column-by-name) + Phase 3 (LockService, staging).
+- **Edit bill, discount, tax, inventory** → need Phase 2 (column-by-name) +
+  Phase 3 (LockService, staging).
 - **Reporting / all-time views / CSV export** → need the Phase 2 dashboard-scope
   decision (server-side aggregation).
 - **Order filters, customer directory** → mostly just Phase 1 (read-only).
+
+## When to outgrow Google Sheets (decision criteria, not a build item)
+
+This section documents the decision so it's planned rather than a surprise —
+it is **not** something to build now. See "Explicit non-goals" below.
+
+**Natural next home:** the app's data is fundamentally relational — fixed
+columns, lookups by key (billNo / customer name), and aggregate reporting
+(revenue by month, top customers/items) that SQL is built for. **Postgres**
+via a managed serverless provider (e.g. **Supabase**, or PlanetScale for
+MySQL) is the natural fit:
+- Relational schema maps ~1:1 onto the current Orders / Customers / ErrorLog
+  sheets.
+- Real indexes replace the linear `getRange().getValues()` scans the backend
+  does today for lookups and updates.
+- SQL aggregates (`GROUP BY`, `SUM`, `LIMIT`) replace client-side aggregation
+  over the full dataset — which several roadmap features (reporting, all-time
+  dashboard views) will need anyway.
+- Instant REST API (e.g. Supabase's PostgREST), so the static frontend can
+  call it directly, same shape as calling Apps Script today — no server to
+  stand up and run.
+- Firestore/Firebase (document-shaped) and Cloud SQL (needs a hand-run API
+  layer in front of it) are worse fits for this reason.
+
+**Signals to watch for** (whichever comes first — a real number, not a guess):
+- **Row count**: order rows approaching **~5,000–10,000**. Sheets' hard limit
+  is 10M cells total (~500K rows at ~20 columns), but real degradation —
+  slower reads, larger JSON payloads the browser has to process for the
+  dashboard — shows up long before that ceiling.
+- **Observed latency**: Orders/Dashboard load time regularly exceeding
+  **~3–5 seconds**, independent of row count.
+
+**Why we are NOT pre-building an automatic volume-triggered cutover:**
+- It's real engineering — schema design, a migration/sync tool, shadow-write
+  or dual-read validation, a rollback plan — comparable effort to just doing
+  the migration once, for real, when it's actually needed.
+- Requirements will likely have shifted by the time the threshold is hit (new
+  fields, new reports), so a schema locked in today risks being stale.
+- Most importantly: an **unattended automatic cutover of live order data is a
+  high-blast-radius, hard-to-reverse action**. It deserves a human decision
+  point and a staged rollout (shadow-write in parallel, verify parity, then
+  cut over) — not a silent trigger. This directly conflicts with not wanting
+  to risk the working app.
+
+**What we do instead (cheap, already covered by this plan):** keep every
+backend call behind the one `api.js` seam (Phase 1). When the day comes, only
+that module changes — nothing else in the app needs to know or care where the
+data lives. Revisit this section itself if the schema changes meaningfully
+before the threshold is reached.
 
 ## Definition of done for groundwork
 
@@ -147,5 +196,6 @@ Feature-specific prerequisites:
 ## Explicit non-goals
 
 - No bundler / build step.
-- No migration off Google Sheets (revisit only if order volume demands it).
+- No migration off Google Sheets, and no automatic cutover tooling — see
+  "When to outgrow Google Sheets" above for the documented criteria.
 - No big-bang rewrite — every phase is its own test-green PR.
