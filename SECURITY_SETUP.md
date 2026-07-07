@@ -10,7 +10,7 @@ the old frontend and new backend are mismatched.
 
 ## What changed
 
-- **Backend (`backend/orders/AppsScript.gs`)** — new `login` action, a signed-token check on
+- **Backend (`backend/orders/Code.js`)** — new `login` action, a signed-token check on
   `orders`, `customers`, `updateStatus`, `updateFulfillment`, bill-create, and
   `uploadProof`. The customer order-tracking link (`getOrderByBill`) stays
   public — it's scoped by its own per-order share token.
@@ -21,7 +21,7 @@ the old frontend and new backend are mismatched.
 ## Step 1 — Update and deploy the Apps Script
 
 1. Open the Apps Script project bound to your orders spreadsheet.
-2. Replace the script contents with the new `backend/orders/AppsScript.gs` from
+2. Replace the script contents with the new `backend/orders/Code.js` from
    this repo (or `npm run clasp:push:orders` — see `docs/CLASP_SETUP.md`).
 3. In the editor, run **`setupServerSecret`** once (Run ▸ setupServerSecret).
    Grant permissions if prompted. This generates the token-signing secret and
@@ -62,7 +62,7 @@ array in `index.html` must match the usernames you created with `setupUser`
 5. Confirm a customer tracking link (`/track?bill=...&token=...`) still works
    without logging in.
 
-## Step 4 — Secure the Ingredient Calculator endpoint (`backend/ingredients/IngredientCalc.gs`)
+## Step 4 — Secure the Ingredient Calculator endpoint (`backend/ingredients/Code.js`)
 
 The ingredients matrix is served by a **second** Apps Script (bound to the
 Ingredient Calculator sheet, `INGREDIENTS_WEBHOOK_URL`). It verifies the same
@@ -75,7 +75,7 @@ session token, so it needs the **same `SERVER_SECRET`** as the main project.
    **Project Settings ▸ Script Properties ▸ Add script property** ▸ name it
    `SERVER_SECRET` and paste the **same** value. (Setting it via Project Settings
    avoids running a function with arguments.)
-3. Replace that project's script with the new `backend/ingredients/IngredientCalc.gs`
+3. Replace that project's script with the new `backend/ingredients/Code.js`
    from this repo (or `npm run clasp:push:ingredients`) and **redeploy** (New
    version), keeping the same Web App URL.
 4. **Order matters:** set the secret (steps 1–2) *before or together with* the

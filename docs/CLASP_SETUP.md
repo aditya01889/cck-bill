@@ -11,8 +11,8 @@ different Google Sheets), so this repo has two clasp project directories:
 
 ```
 backend/
-  orders/        — AppsScript.gs (bound to the main Orders sheet)
-  ingredients/   — IngredientCalc.gs (bound to the Ingredient Calculator sheet)
+  orders/        — Code.js (bound to the main Orders sheet)
+  ingredients/   — Code.js (bound to the Ingredient Calculator sheet)
 ```
 
 ## One-time setup (needs your Google account — do this on your own machine)

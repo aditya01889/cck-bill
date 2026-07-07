@@ -2,7 +2,7 @@
 
 You have 2 main files:
 - `index.html` — the actual e-bill page (UI + branding; logic lives in `app.js`/`config.js`)
-- `backend/orders/AppsScript.gs` — code that logs each bill into a Google Sheet
+- `backend/orders/Code.js` — code that logs each bill into a Google Sheet
 
 Total cost: ₹0. No signups beyond your existing Google account, GitHub, and Vercel.
 
@@ -84,7 +84,7 @@ If you ever need to re-apply this (e.g. after restructuring the sheet):
 
 ## Re-deploying the Apps Script after code changes
 
-Whenever `backend/orders/AppsScript.gs` content changes:
+Whenever `backend/orders/Code.js` content changes:
 
 1. Open **Extensions → Apps Script** on your Sheet
 2. Select all existing code, delete it, paste in the new version
@@ -147,13 +147,13 @@ The **Ingredients** tab appears only when logged in as Aditya. It lets you selec
 - **Buying sub-tab**: see the total ingredient quantities needed (in grams) across all selected orders, with checkboxes and a WhatsApp share button.
 - **Making sub-tab**: pick a product and see per-unit ingredient breakdown × the total quantity.
 
-### Setting up backend/ingredients/IngredientCalc.gs
+### Setting up backend/ingredients/Code.js
 
 This is a *separate* Apps Script deployed from the **Ingredient Calculator** sheet (`19KsODKUYk8_1eeSTlk20Kt92MIXjj17BPk_iDaAP8Oc`).
 
 1. Open the Ingredient Calculator Google Sheet
 2. Click **Extensions → Apps Script**
-3. Delete any existing code, paste in the contents of `backend/ingredients/IngredientCalc.gs`
+3. Delete any existing code, paste in the contents of `backend/ingredients/Code.js`
 4. Click **Save** (Ctrl+S)
 5. Click **Deploy → New deployment**
 6. Type: **Web app**, Execute as: **Me**, Access: **Anyone**
@@ -164,7 +164,7 @@ This is a *separate* Apps Script deployed from the **Ingredient Calculator** she
 (Once `clasp` is set up — see `docs/CLASP_SETUP.md` — steps 2–4 become
 `npm run clasp:push:ingredients`.)
 
-### Sheet structure expected by IngredientCalc.gs
+### Sheet structure expected by Code.js
 
 The Apps Script reads the sheet named **`Product_ingredient_matrix`**:
 - **Row 1** = headers: Column A = product name, Column B = category (ignored), Columns C onward = ingredient names
