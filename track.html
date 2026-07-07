@@ -233,10 +233,8 @@
 
 <footer>CozyCatKitchen &mdash; Homemade with love 🐾</footer>
 
-<!-- Shared config + fetchWithTimeout() (also used by the main app). -->
-<script src="/config.js"></script>
-<script>
-// SHEET_WEBHOOK_URL and fetchWithTimeout() come from config.js above.
+<script type="module">
+import { SHEET_WEBHOOK_URL, fetchWithTimeout } from '/core/config.js';
 
 function getParam(name){
   return new URLSearchParams(window.location.search).get(name) || '';
