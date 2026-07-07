@@ -808,7 +808,6 @@ function statusBadgeClass(s){
   const l = s.toLowerCase();
   if(l === 'paid') return 'paid';
   if(l === 'pending') return 'pending';
-  if(l.startsWith('partial')) return 'partial';
   return '';
 }
 
@@ -1547,7 +1546,7 @@ async function loadOrders(search){
 }
 
 function toggleProofSection(status){
-  const show = status === 'Paid' || status === 'Partially Paid';
+  const show = status === 'Paid';
   document.getElementById('proofSection').style.display = show ? 'block' : 'none';
 }
 

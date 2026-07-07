@@ -486,7 +486,6 @@
   }
   .status-badge.paid{background:#E8F5EE;color:#3D7A4D;border-color:#B8DEC7;}
   .status-badge.pending{background:#FFF8EC;color:#9C7A2E;border-color:#F0DC9A;}
-  .status-badge.partial{background:#EEF3FF;color:#3A5BC7;border-color:#B8C8F0;}
   .btn-mark{
     font-family:'Quicksand',sans-serif;font-size:11px;font-weight:700;
     padding:5px 11px;border-radius:6px;
