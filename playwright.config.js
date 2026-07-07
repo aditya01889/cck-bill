@@ -1,4 +1,10 @@
 const { defineConfig } = require('@playwright/test');
+const fs = require('fs');
+
+// In the claude.ai remote execution environment the browser is pre-installed at
+// a fixed path; on CI (GitHub Actions) Playwright installs it itself.
+const REMOTE_CHROME = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const launchOptions = fs.existsSync(REMOTE_CHROME) ? { executablePath: REMOTE_CHROME } : {};
 
 module.exports = defineConfig({
   testDir: './tests',
@@ -16,6 +22,6 @@ module.exports = defineConfig({
     baseURL: 'http://localhost:3000',
   },
   projects: [
-    { name: 'chromium', use: { browserName: 'chromium', launchOptions: { executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' } } },
+    { name: 'chromium', use: { browserName: 'chromium', launchOptions } },
   ],
 });
