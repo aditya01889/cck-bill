@@ -101,7 +101,6 @@
   }
   .status-badge.paid{background:#E8F5EE;color:#3D7A4D;border-color:#B8DEC7;}
   .status-badge.pending{background:#FFF8EC;color:#9C7A2E;border-color:#F0DC9A;}
-  .status-badge.partial{background:#EEF3FF;color:#3A5BC7;border-color:#B8C8F0;}
 
   /* Fulfillment steps */
   .steps{display:flex;align-items:center;gap:0;margin:14px 0 4px;}
@@ -268,7 +267,6 @@ function setPaymentBadge(status){
   const l = (status || '').toLowerCase();
   if(l === 'paid') el.classList.add('paid');
   else if(l === 'pending') el.classList.add('pending');
-  else if(l.startsWith('partial')) el.classList.add('partial');
 }
 
 function setFulfillmentSteps(status){
