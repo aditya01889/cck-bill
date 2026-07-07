@@ -1,4 +1,4 @@
-// IngredientCalc.gs — Apps Script for the CCK Ingredient Calculator sheet
+// Code.js — Apps Script for the CCK Ingredient Calculator sheet
 // Deploy this as a Web App from the Ingredient Calculator Google Sheet
 // (Sheet ID: 19KsODKUYk8_1eeSTlk20Kt92MIXjj17BPk_iDaAP8Oc)
 // Execute as: Me | Access: Anyone
@@ -19,7 +19,7 @@ function doGet(e) {
  * AUTH (verify only)
  * ------------------------------------------------------------
  * This web app only *verifies* session tokens minted by the main
- * app (AppsScript.gs). For that to work, this project's Script
+ * app (Code.js). For that to work, this project's Script
  * Properties must contain a SERVER_SECRET with the SAME value as
  * the main project. Set it once via Project Settings ▸ Script
  * Properties (copy the value from the main project) — see

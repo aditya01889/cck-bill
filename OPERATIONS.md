@@ -1,6 +1,6 @@
 # Operations — backups & error log
 
-Two operational features live in `backend/orders/AppsScript.gs` (main project).
+Two operational features live in `backend/orders/Code.js` (main project).
 Both take effect after you deploy the updated script and redeploy that Web App
 (New version) — either by pasting into the editor, or via
 `npm run clasp:push:orders` (see `docs/CLASP_SETUP.md`).

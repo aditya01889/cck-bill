@@ -29,7 +29,7 @@ suite at every step.
 
 Two process choices unlock the rest:
 
-1. **Adopt `clasp`** (Apps Script CLI) so `AppsScript.gs` / `IngredientCalc.gs`
+1. **Adopt `clasp`** (Apps Script CLI) so `Code.js` / `Code.js`
    deploy from the repo — versioned and repeatable — instead of manual
    copy‑paste into the editor. **Decided: yes** — see `docs/CLASP_SETUP.md`.
    Both projects now live under `backend/orders/` and `backend/ingredients/`,
@@ -87,7 +87,7 @@ modules. Likely 1–2 PRs, each test-green before merge.
   backend maps `r[0]…r[19]` by index, so inserting or reordering a column in the
   Sheet silently breaks everything — and several roadmap features need new
   columns (discount, tax, balance-due). Introduce one **column map** keyed by
-  header; the `api` module and `AppsScript.gs` both use it.
+  header; the `api` module and `Code.js` both use it.
 - **Document the sheet schema** (columns, types, meaning) in one place
   (`docs/SCHEMA.md`).
 - **Decide dashboard scope.** Every dashboard stat is currently computed over
@@ -100,9 +100,9 @@ modules. Likely 1–2 PRs, each test-green before merge.
 
 ## Phase 3 — Backend process & safety
 
-- ~~`clasp`~~ — **done** (Phase 0). `backend/orders/AppsScript.gs` and
-  `backend/ingredients/IngredientCalc.gs` are each a self-contained clasp
-  project now. The remaining piece here: split `AppsScript.gs` itself into
+- ~~`clasp`~~ — **done** (Phase 0). `backend/orders/Code.js` and
+  `backend/ingredients/Code.js` are each a self-contained clasp
+  project now. The remaining piece here: split `Code.js` itself into
   `auth.gs`, `orders.gs`, `customers.gs`, `errorlog.gs`, etc. within
   `backend/orders/` — Apps Script files share scope, so multiple `.gs` files
   in one project is low-risk, and clasp pushes/pulls all of them together.
