@@ -31,10 +31,17 @@ Two process choices unlock the rest:
 
 1. **Adopt `clasp`** (Apps Script CLI) so `AppsScript.gs` / `IngredientCalc.gs`
    deploy from the repo — versioned and repeatable — instead of manual
-   copy‑paste into the editor. Recommended: **yes.**
+   copy‑paste into the editor. **Decided: yes** — see `docs/CLASP_SETUP.md`.
+   Both projects now live under `backend/orders/` and `backend/ingredients/`,
+   each a self-contained clasp project.
 2. **Create a staging environment** — a throwaway Google Sheet + a second Web App
    deployment (second webhook URL) — so features that *write* data are exercised
-   without touching live orders. Recommended: **yes.**
+   without touching live orders. **Decided: defer** until Phase 2/3 (the first
+   schema-changing / data-writing work), using runtime hostname detection in
+   `config.js` (not branch-diverging config) so `dev` and `main` never need a
+   manual "don't merge the staging URL" step at release time. See "When to
+   outgrow Google Sheets" below for the same reasoning applied to a bigger
+   decision.
 
 Everything below is execution.
 
@@ -93,17 +100,20 @@ modules. Likely 1–2 PRs, each test-green before merge.
 
 ## Phase 3 — Backend process & safety
 
-- **`clasp`**: move the `.gs` files into a clasp project; split
-  `AppsScript.gs` into `auth.gs`, `orders.gs`, `customers.gs`, `errorlog.gs`,
-  etc. (Apps Script files share scope, so this is low-risk). Deploy via clasp.
+- ~~`clasp`~~ — **done** (Phase 0). `backend/orders/AppsScript.gs` and
+  `backend/ingredients/IngredientCalc.gs` are each a self-contained clasp
+  project now. The remaining piece here: split `AppsScript.gs` itself into
+  `auth.gs`, `orders.gs`, `customers.gs`, `errorlog.gs`, etc. within
+  `backend/orders/` — Apps Script files share scope, so multiple `.gs` files
+  in one project is low-risk, and clasp pushes/pulls all of them together.
 - **Backend tests**: extract the pure functions (token verify, input validation,
   the column map) so they run in Node/CI. Today the backend has *zero* automated
   tests.
 - **`LockService`** around every write action (status/fulfillment update,
   append, upcoming edit/inventory writes) — Sheets has no transactions, so
   concurrent writes can clobber.
-- **Wire up staging** (from Phase 0): a config switch so the app can point at the
-  staging webhook during feature development.
+- **Wire up staging** (from Phase 0): the runtime hostname-detection switch in
+  `config.js` described above, once the staging Sheet + deployment exist.
 
 ---
 
@@ -121,9 +131,9 @@ modules. Likely 1–2 PRs, each test-green before merge.
 
 | Order | Work | Why this order |
 |------|------|----------------|
-| 1 | Phase 0 decisions (clasp, staging) | Cheap; unlocks Phase 3 |
+| 1 | Phase 0 decisions (clasp ✅ done, staging deferred) | Cheap; unlocks Phase 3 |
 | 2 | Phase 1 carve + column-by-name (Phase 2 first item) | Enabling step; do together since both touch the new `api` layer |
-| 3 | Phase 3 (clasp, backend tests, LockService, staging) | Before the first data-*writing* feature |
+| 3 | Phase 3 (split into multiple .gs files, backend tests, LockService, staging) | Before the first data-*writing* feature |
 | 4 | Phase 4 (Settings pattern, template) | Before the first admin/config feature |
 | 5 | **Feature work begins** | On clean foundations |
 
@@ -188,7 +198,7 @@ before the threshold is reached.
 
 - `app.js` replaced by modules; features lazy-load; all tests green.
 - Backend reads/writes columns **by name**; schema documented.
-- Backend deploys via **clasp**, has **unit tests**, uses **LockService** on
+- Backend deploys via **clasp** ✅, has **unit tests**, uses **LockService** on
   writes.
 - A **staging** Sheet + deployment exists.
 - **Settings** pattern + feature template established.

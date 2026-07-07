@@ -10,7 +10,7 @@ the old frontend and new backend are mismatched.
 
 ## What changed
 
-- **Backend (`AppsScript.gs`)** — new `login` action, a signed-token check on
+- **Backend (`backend/orders/AppsScript.gs`)** — new `login` action, a signed-token check on
   `orders`, `customers`, `updateStatus`, `updateFulfillment`, bill-create, and
   `uploadProof`. The customer order-tracking link (`getOrderByBill`) stays
   public — it's scoped by its own per-order share token.
@@ -21,7 +21,8 @@ the old frontend and new backend are mismatched.
 ## Step 1 — Update and deploy the Apps Script
 
 1. Open the Apps Script project bound to your orders spreadsheet.
-2. Replace the script contents with the new `AppsScript.gs` from this repo.
+2. Replace the script contents with the new `backend/orders/AppsScript.gs` from
+   this repo (or `npm run clasp:push:orders` — see `docs/CLASP_SETUP.md`).
 3. In the editor, run **`setupServerSecret`** once (Run ▸ setupServerSecret).
    Grant permissions if prompted. This generates the token-signing secret and
    stores it in Script Properties. Re-running it is safe — it won't overwrite an
@@ -61,7 +62,7 @@ array in `index.html` must match the usernames you created with `setupUser`
 5. Confirm a customer tracking link (`/track?bill=...&token=...`) still works
    without logging in.
 
-## Step 4 — Secure the Ingredient Calculator endpoint (`IngredientCalc.gs`)
+## Step 4 — Secure the Ingredient Calculator endpoint (`backend/ingredients/IngredientCalc.gs`)
 
 The ingredients matrix is served by a **second** Apps Script (bound to the
 Ingredient Calculator sheet, `INGREDIENTS_WEBHOOK_URL`). It verifies the same
@@ -74,8 +75,9 @@ session token, so it needs the **same `SERVER_SECRET`** as the main project.
    **Project Settings ▸ Script Properties ▸ Add script property** ▸ name it
    `SERVER_SECRET` and paste the **same** value. (Setting it via Project Settings
    avoids running a function with arguments.)
-3. Replace that project's script with the new `IngredientCalc.gs` from this repo
-   and **redeploy** (New version), keeping the same Web App URL.
+3. Replace that project's script with the new `backend/ingredients/IngredientCalc.gs`
+   from this repo (or `npm run clasp:push:ingredients`) and **redeploy** (New
+   version), keeping the same Web App URL.
 4. **Order matters:** set the secret (steps 1–2) *before or together with* the
    redeploy. If the guard is live but the secret is missing/mismatched, the
    matrix requests come back `Unauthorized` — the app degrades gracefully (orders
@@ -92,19 +94,6 @@ session token, so it needs the **same `SERVER_SECRET`** as the main project.
 - **Reset a password:** re-run `setupUser` with the same username.
 - **Rotating `SERVER_SECRET`** logs everyone out (existing tokens stop verifying)
   and must be updated in **both** projects to the same new value.
-- Session tokens ride in the query string on GET reads, so they can appear in
-  browser history and Apps Script execution logs. That's an accepted trade for
-  this internal tool; the short lifetime limits exposure. HTTPS (always on for
-  `script.google.com`) keeps them off the wire.
-
-- **Token lifetime is 12h** (`TOKEN_TTL_MS`). After that, users log in again.
-- **Revoking someone:** set their `active` cell in the `Users` sheet to `FALSE`.
-  They can't get a new token; any existing token stops working within 12h.
-- **Reset a password:** re-run `setupUser` with the same username.
-- **The ingredients matrix endpoint (`IngredientCalc.gs`)** is a *separate*
-  deployment and is **not** covered here. It returns recipe data, not customer
-  PII, so it's lower risk — but it should get the same token check in a
-  follow-up for consistency.
 - Session tokens ride in the query string on GET reads, so they can appear in
   browser history and Apps Script execution logs. That's an accepted trade for
   this internal tool; the short lifetime limits exposure. HTTPS (always on for

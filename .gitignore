@@ -1,3 +1,8 @@
 node_modules/
 test-results/
 playwright-report/
+
+# clasp (Apps Script CLI) local OAuth credentials — never commit these.
+# The per-project .clasp.json (scriptId + rootDir) IS committed; it's not secret.
+.clasprc.json
+backend/**/.clasprc.json
