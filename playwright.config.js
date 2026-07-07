@@ -16,6 +16,6 @@ module.exports = defineConfig({
     baseURL: 'http://localhost:3000',
   },
   projects: [
-    { name: 'chromium', use: { browserName: 'chromium' } },
+    { name: 'chromium', use: { browserName: 'chromium', launchOptions: { executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' } } },
   ],
 });

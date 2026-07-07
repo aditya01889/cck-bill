@@ -8,7 +8,7 @@
   ],
   "headers": [
     {
-      "source": "/(app.js|app.css|config.js)",
+      "source": "/(main\\.js|app\\.css|core/.*\\.js|features/.*\\.js)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
       ]
