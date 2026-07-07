@@ -5,8 +5,10 @@ A simple, free e-billing tool for CozyCatKitchen — built as a single static HT
 ## What's in this repo
 
 - `index.html` — the complete e-bill app (UI, logic, and CozyCatKitchen branding, all in one file)
-- `AppsScript.gs` — Google Apps Script code that logs each generated bill as a row in a connected Google Sheet, and serves order history and status updates back to the app
+- `backend/orders/Code.js` — Google Apps Script code that logs each generated bill as a row in a connected Google Sheet, and serves order history and status updates back to the app
+- `backend/ingredients/Code.js` — Apps Script code for the Ingredient Calculator sheet
 - `SETUP_INSTRUCTIONS.md` — step-by-step guide for setting up the Google Sheet logging
+- `docs/CLASP_SETUP.md` — deploying the backend from the repo via `clasp` instead of copy-pasting into the browser editor
 
 ## Features
 

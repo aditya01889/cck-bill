@@ -2,9 +2,17 @@
   "name": "cck-bill",
   "private": true,
   "scripts": {
-    "test": "playwright test"
+    "test": "playwright test",
+    "clasp:login": "clasp login",
+    "clasp:pull:orders": "cd backend/orders && clasp pull",
+    "clasp:push:orders": "cd backend/orders && clasp push",
+    "clasp:open:orders": "cd backend/orders && clasp open-script",
+    "clasp:pull:ingredients": "cd backend/ingredients && clasp pull",
+    "clasp:push:ingredients": "cd backend/ingredients && clasp push",
+    "clasp:open:ingredients": "cd backend/ingredients && clasp open-script"
   },
   "devDependencies": {
+    "@google/clasp": "^3.3.0",
     "@playwright/test": "^1.48.0",
     "serve": "^14.2.0"
   }

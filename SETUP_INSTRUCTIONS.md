@@ -1,8 +1,8 @@
 # CozyCatKitchen E-Bill — Setup Guide
 
 You have 2 main files:
-- `index.html` — the actual e-bill page (everything: UI, branding, logic — all in one file)
-- `AppsScript.gs` — code that logs each bill into a Google Sheet
+- `index.html` — the actual e-bill page (UI + branding; logic lives in `app.js`/`config.js`)
+- `backend/orders/Code.js` — code that logs each bill into a Google Sheet
 
 Total cost: ₹0. No signups beyond your existing Google account, GitHub, and Vercel.
 
@@ -84,7 +84,7 @@ If you ever need to re-apply this (e.g. after restructuring the sheet):
 
 ## Re-deploying the Apps Script after code changes
 
-Whenever `AppsScript.gs` content changes:
+Whenever `backend/orders/Code.js` content changes:
 
 1. Open **Extensions → Apps Script** on your Sheet
 2. Select all existing code, delete it, paste in the new version
@@ -94,7 +94,12 @@ Whenever `AppsScript.gs` content changes:
 6. Under "Version," choose **New version**
 7. Click **Deploy**
 
-This keeps the **same Web App URL** — no need to update `SHEET_WEBHOOK_URL` in `index.html` again.
+This keeps the **same Web App URL** — no need to update `SHEET_WEBHOOK_URL` in
+`config.js` again.
+
+Once `clasp` is set up (see `docs/CLASP_SETUP.md`), steps 1–3 are replaced by
+`npm run clasp:push:orders` — you'd still do the "New version → Deploy" part
+(or the `clasp deploy` CLI equivalent).
 
 > **Note on payment screenshot uploads:** The first time a screenshot is uploaded, Apps Script will request permission to access Google Drive (in addition to Sheets). This is normal — approve it when prompted. Without this permission, screenshot uploads will silently fail while status updates continue to work fine.
 
@@ -102,11 +107,11 @@ This keeps the **same Web App URL** — no need to update `SHEET_WEBHOOK_URL` in
 
 ## Updating the live site (GitHub → Vercel)
 
-1. Go to your GitHub repo (`aditya01889/cck-bill`)
-2. Open `index.html` → click the **pencil/edit icon**
-3. Replace the content with the updated version, or use **"Upload files"** from the repo's main page to overwrite it directly
-4. Commit the change (commit directly to `main`)
-5. Vercel auto-detects the push and redeploys — your live URL updates automatically within a minute or so
+See `docs/BRANCHING.md` for the full workflow. In short: changes go to the
+`dev` branch first (its own Vercel preview at `cck-bill-dev.vercel.app`), then
+ship to production via a PR from `dev` into `main` — `main` is protected, so
+direct commits to it are blocked. Once that PR merges, Vercel auto-redeploys
+production within a minute or so.
 
 ---
 
@@ -142,21 +147,24 @@ The **Ingredients** tab appears only when logged in as Aditya. It lets you selec
 - **Buying sub-tab**: see the total ingredient quantities needed (in grams) across all selected orders, with checkboxes and a WhatsApp share button.
 - **Making sub-tab**: pick a product and see per-unit ingredient breakdown × the total quantity.
 
-### Setting up IngredientCalc.gs
+### Setting up backend/ingredients/Code.js
 
 This is a *separate* Apps Script deployed from the **Ingredient Calculator** sheet (`19KsODKUYk8_1eeSTlk20Kt92MIXjj17BPk_iDaAP8Oc`).
 
 1. Open the Ingredient Calculator Google Sheet
 2. Click **Extensions → Apps Script**
-3. Delete any existing code, paste in the contents of `IngredientCalc.gs`
+3. Delete any existing code, paste in the contents of `backend/ingredients/Code.js`
 4. Click **Save** (Ctrl+S)
 5. Click **Deploy → New deployment**
 6. Type: **Web app**, Execute as: **Me**, Access: **Anyone**
 7. Click **Deploy** and copy the URL
-8. In `index.html`, find: `const INGREDIENTS_WEBHOOK_URL = "";`
+8. In `config.js`, find: `const INGREDIENTS_WEBHOOK_URL = "";`
 9. Paste the URL between the quotes and save/redeploy the site
 
-### Sheet structure expected by IngredientCalc.gs
+(Once `clasp` is set up — see `docs/CLASP_SETUP.md` — steps 2–4 become
+`npm run clasp:push:ingredients`.)
+
+### Sheet structure expected by Code.js
 
 The Apps Script reads the sheet named **`Product_ingredient_matrix`**:
 - **Row 1** = headers: Column A = product name, Column B = category (ignored), Columns C onward = ingredient names
