@@ -2,7 +2,9 @@
   "name": "cck-bill",
   "private": true,
   "scripts": {
-    "test": "playwright test",
+    "test": "npm run test:backend && npx playwright test",
+    "test:backend": "node --test backend/orders/tests/",
+    "test:e2e": "playwright test",
     "clasp:login": "clasp login",
     "clasp:pull:orders": "cd backend/orders && clasp pull",
     "clasp:push:orders": "cd backend/orders && clasp push",
