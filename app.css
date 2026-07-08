@@ -740,3 +740,31 @@
   .autocomplete-item:hover,.autocomplete-item.ac-focused{background:#F5F0E8;}
   .ac-name{font-size:14px;font-weight:700;color:var(--ink);}
   .ac-sub{font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+  /* ---- Settings tab ---- */
+  .settings-card{
+    background:var(--paper);border:1px solid var(--line);border-radius:10px;
+    padding:16px;margin-top:20px;
+  }
+  .settings-card-title{
+    font-family:'Quicksand',sans-serif;font-size:11px;letter-spacing:0.14em;
+    text-transform:uppercase;color:var(--rust-deep);font-weight:700;margin-bottom:12px;
+  }
+  .settings-row{
+    display:flex;align-items:flex-start;gap:10px;padding:7px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .settings-row:last-child{border-bottom:none;}
+  .settings-label{
+    font-size:12.5px;font-weight:600;color:var(--muted);flex-shrink:0;width:110px;padding-top:1px;
+  }
+  .settings-code{
+    font-size:11.5px;color:var(--ink);word-break:break-all;flex:1;
+    font-family:monospace;
+  }
+  .env-badge{
+    display:inline-block;padding:3px 10px;border-radius:20px;
+    font-size:11.5px;font-weight:700;letter-spacing:0.04em;
+  }
+  .env-prod{background:#E8F5E9;color:#2E7D32;}
+  .env-dev{background:#FFF8E1;color:#F57F17;}

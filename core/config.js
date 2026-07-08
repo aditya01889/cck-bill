@@ -5,8 +5,16 @@
    here. Change a URL or product once — not in every feature file.
    ============================================================ */
 
-/* EDIT ZONE 1 — GOOGLE APPS SCRIPT WEB APP URLS */
-export const SHEET_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxAiGRuOVaN61HJe8szgTGQlA1iun-mjO-3MmhTYW1Jwnyzfc9ZKAmCR9f281-BrZV2/exec";
+/* ---- Environment detection ---- */
+const _host = location.hostname;
+export const IS_PROD   = _host === 'cck-bill.vercel.app';
+export const IS_DEV    = _host === 'localhost' || _host.includes('-dev.');
+export const ENV_LABEL = IS_PROD ? 'Production' : IS_DEV ? 'Development' : 'Preview';
+
+/* EDIT ZONE 1 — GOOGLE APPS SCRIPT WEB APP URLS
+   To add a staging backend: deploy a second Apps Script version and set the
+   staging URL below, then swap based on IS_PROD. */
+export const SHEET_WEBHOOK_URL       = "https://script.google.com/macros/s/AKfycbxAiGRuOVaN61HJe8szgTGQlA1iun-mjO-3MmhTYW1Jwnyzfc9ZKAmCR9f281-BrZV2/exec";
 export const INGREDIENTS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwQu7pHeXayRv87M7-zUinXNTiw8YQaXXAMQ_E8tY-oLuhGs5tUwqC7dPBBxogCJLKObA/exec";
 
 /* EDIT ZONE 1B — UPI PAYMENT */
@@ -93,7 +101,7 @@ CATALOG.forEach(cat => {
    per-user landing tab and visible tabs — it is a UX convenience, not
    a security boundary. The real gate is the server-side token check. */
 export const USERS = [
-  { name: "Aditya",   landing: "dashboard", access: ["dashboard","newbill","orders","ingredients"] },
+  { name: "Aditya",   landing: "dashboard", access: ["dashboard","newbill","orders","ingredients","settings"] },
   { name: "Priyanka", landing: "newbill",   access: ["newbill","orders","dashboard"] },
 ];
 

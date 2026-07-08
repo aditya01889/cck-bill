@@ -9,6 +9,7 @@ import { initNewBill, renderProducts, updateTotals, resetQuantities } from '/fea
 import { loadDashboard, renderDashboard } from '/features/dashboard.js';
 import { loadOrders, initOrders } from '/features/orders.js';
 import { loadIngredientTab, loadIngMatrix, initIngredients } from '/features/ingredients.js';
+import { loadSettings } from '/features/settings.js';
 
 /* ---- Global error visibility ---- */
 
@@ -78,6 +79,7 @@ setReloginCallback(showLogin);
 registerTabHandler('dashboard', loadDashboard);
 registerTabHandler('orders', () => loadOrders());
 registerTabHandler('ingredients', loadIngredientTab);
+registerTabHandler('settings', loadSettings);
 
 /* ---- Event wiring ---- */
 
