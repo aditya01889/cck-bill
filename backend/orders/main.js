@@ -18,6 +18,10 @@ function doPost(e) {
       return uploadPaymentProof(data);
     }
 
+    if (data.action === 'updateOrder') {
+      return updateOrder(data);
+    }
+
     // New order creation — lock covers both the appendRow and the customer upsert
     // so concurrent submissions don't interleave rows in either sheet.
     var lock = LockService.getScriptLock();

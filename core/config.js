@@ -108,8 +108,8 @@ CATALOG.forEach(cat => {
    per-user landing tab and visible tabs — it is a UX convenience, not
    a security boundary. The real gate is the server-side token check. */
 export const USERS = [
-  { name: "Aditya",   landing: "dashboard", access: ["dashboard","newbill","orders","ingredients","settings"] },
-  { name: "Priyanka", landing: "newbill",   access: ["newbill","orders","dashboard"] },
+  { name: "Aditya",   landing: "dashboard", access: ["dashboard","newbill","orders","customers","reports","ingredients","settings"] },
+  { name: "Priyanka", landing: "newbill",   access: ["newbill","orders","customers","dashboard"] },
 ];
 
 /* Fulfillment / dispatch constants */

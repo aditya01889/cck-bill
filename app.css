@@ -202,6 +202,8 @@
   .btn-primary:active{background:var(--rust-deep);}
   .btn-secondary{background:var(--paper);color:var(--ink);border:1.5px solid var(--ink);}
   .btn-secondary:active{background:var(--cream);}
+  .btn-whatsapp{background:#25d366;color:#fff;border:none;}
+  .btn-whatsapp:active{background:#1ebe5d;}
   .field-error{
     font-size:11.5px;
     color:var(--rust);
@@ -463,12 +465,15 @@
   /* ---- Tab bar ---- */
   .tab-bar{
     display:flex;
+    overflow-x:auto;
+    scrollbar-width:none;
     border-bottom:2px solid var(--line);
     background:var(--paper);
-    padding:0 16px;
+    padding:0 8px;
   }
+  .tab-bar::-webkit-scrollbar{display:none;}
   .tab-bar .tab{
-    flex:1;padding:13px 8px;
+    flex-shrink:0;white-space:nowrap;padding:13px 10px;
     border:none;background:none;
     font-family:'Quicksand',sans-serif;
     font-size:12.5px;font-weight:700;
@@ -678,6 +683,102 @@
     color:var(--ink);font-family:inherit;margin-bottom:10px;
   }
   .fulfillment-tracking-input:focus{outline:none;border-color:#5B7FD4;}
+
+  /* ---- Edit mode banner ---- */
+  #editModeBanner{
+    display:none;
+    align-items:center;justify-content:space-between;
+    background:var(--rust-pale,#fff8f5);border:1.5px solid var(--rust,#c85c3a);
+    border-radius:8px;padding:10px 14px;margin-bottom:16px;
+    font-size:13.5px;color:var(--rust-deep,#a03520);font-weight:600;gap:12px;
+  }
+  #cancelEditBtn{
+    background:none;border:1.5px solid var(--rust,#c85c3a);
+    color:var(--rust-deep,#a03520);border-radius:6px;
+    padding:5px 12px;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;
+  }
+
+  /* ---- Reports tab ---- */
+  .report-stats{
+    display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px;
+  }
+  .report-stat{
+    background:var(--paper);border:1px solid var(--line);
+    border-radius:8px;padding:12px;text-align:center;
+  }
+  .report-stat-val{
+    font-size:16px;font-weight:800;color:var(--rust-deep);
+    font-family:'Quicksand',sans-serif;
+  }
+  .report-stat-lbl{
+    font-size:10.5px;color:var(--muted);font-weight:700;
+    text-transform:uppercase;letter-spacing:0.06em;
+    font-family:'Quicksand',sans-serif;margin-top:3px;
+  }
+  .report-row{
+    display:flex;justify-content:space-between;align-items:flex-start;
+    padding:10px 0;border-bottom:1px solid var(--line);gap:8px;
+  }
+  .report-row:last-child{border-bottom:none;}
+  .report-row-left{flex:1;min-width:0;}
+  .report-row-name{font-size:14px;font-weight:700;color:var(--ink);}
+  .report-row-meta{font-size:11.5px;color:var(--muted);font-weight:600;margin-top:2px;}
+  .report-row-right{text-align:right;flex-shrink:0;}
+  .report-row-amt{
+    font-size:14px;font-weight:800;color:var(--rust-deep);
+    white-space:nowrap;margin-bottom:4px;
+  }
+
+  /* ---- Customer directory ---- */
+  .cust-card{
+    background:var(--paper);border:1px solid var(--line);
+    border-radius:8px;padding:12px 14px;margin-bottom:10px;cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .cust-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+  .cust-card-info{flex:1;min-width:0;}
+  .cust-card-name{font-size:15px;font-weight:700;color:var(--ink);}
+  .cust-card-meta{font-size:11.5px;color:var(--muted);margin-top:3px;font-weight:600;}
+  .cust-card-right{text-align:center;flex-shrink:0;}
+  .cust-orders-count{
+    font-size:20px;font-weight:800;color:var(--rust-deep);
+    font-family:'Quicksand',sans-serif;line-height:1;
+  }
+  .cust-orders-label{
+    font-size:10px;color:var(--muted);font-weight:700;
+    text-transform:uppercase;letter-spacing:0.06em;
+    font-family:'Quicksand',sans-serif;margin-top:2px;
+  }
+  .cust-detail-name{
+    font-size:18px;font-weight:800;color:var(--ink);
+    margin-bottom:14px;
+  }
+  .cust-stats-row{
+    display:flex;gap:16px;margin:4px 0 8px;
+  }
+  .cust-stat{
+    flex:1;background:var(--cream);border-radius:8px;
+    padding:10px 12px;text-align:center;
+  }
+  .cust-stat-val{
+    font-size:17px;font-weight:800;color:var(--rust-deep);
+    font-family:'Quicksand',sans-serif;
+  }
+  .cust-stat-lbl{
+    font-size:10.5px;color:var(--muted);font-weight:700;
+    text-transform:uppercase;letter-spacing:0.06em;
+    font-family:'Quicksand',sans-serif;margin-top:3px;
+  }
+  .cust-history-row{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:10px 0;border-bottom:1px solid var(--line);gap:8px;
+  }
+  .cust-history-row:last-child{border-bottom:none;}
+  .cust-history-bill{font-size:12.5px;font-weight:700;color:var(--muted);}
+  .cust-history-amt{
+    font-size:14px;font-weight:800;color:var(--rust-deep);
+    white-space:nowrap;flex-shrink:0;
+  }
 
   /* ---- Ingredients tab ---- */
   .ing-intro{font-size:13px;color:var(--muted);font-weight:600;margin:0 0 14px;}

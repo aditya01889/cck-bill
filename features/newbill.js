@@ -2,8 +2,12 @@
 import { PRODUCTS, UPI_ID, UPI_PAYEE_NAME } from '/core/config.js';
 import { escapeHtml, setStatus } from '/core/dom.js';
 import { _authToken, currentUser } from '/core/auth.js';
-import { logToSheet, invalidateOrders } from '/core/api.js';
+import { logToSheet, invalidateOrders, parseItemsFull, updateOrderInSheet } from '/core/api.js';
+import { navigateTo } from '/core/router.js';
 import { customersState } from '/core/state.js';
+
+/* ---- Edit state ---- */
+let _editOrder = null;
 
 /* ---- Quantities state ---- */
 export let quantities = PRODUCTS.map(() => 0);
@@ -147,6 +151,96 @@ export function positionOverlayActions() {
   wrap.style.paddingBottom = '10px';
 }
 
+/* ---- Edit helpers ---- */
+
+const _EDIT_MON = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+
+function _dateToISO(str) {
+  if (!str) return '';
+  const m = String(str).trim().match(/(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})/);
+  if (!m) return '';
+  const mon = _EDIT_MON[m[2].toLowerCase()];
+  if (mon == null) return '';
+  const d = new Date(parseInt(m[3],10), mon, parseInt(m[1],10));
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function _parseDispatchRange(display) {
+  if (!display) return { from: '', to: '' };
+  const parts = String(display).split(' - ');
+  const from = _dateToISO(parts[0]);
+  const to   = _dateToISO(parts[1] || parts[0]);
+  return { from, to: to !== from ? to : '' };
+}
+
+function _clearEditState() {
+  _editOrder = null;
+  document.getElementById('editModeBanner').style.display = 'none';
+  document.getElementById('generateBtn').textContent = 'Generate Bill';
+}
+
+export function loadOrderForEdit(order) {
+  _editOrder = order;
+
+  navigateTo('newbill');
+
+  // Show edit banner
+  document.getElementById('editBillRef').textContent = order.billNo;
+  document.getElementById('editModeBanner').style.display = 'flex';
+  document.getElementById('generateBtn').textContent = 'Save Changes';
+
+  // Customer details
+  document.getElementById('custName').value    = order.name    || '';
+  document.getElementById('custPhone').value   = order.phone   || '';
+  document.getElementById('custEmail').value   = order.email   || '';
+  document.getElementById('custAddress').value = order.address || '';
+
+  // Restore product quantities from itemsSummary
+  quantities = PRODUCTS.map(() => 0);
+  const parsedItems = parseItemsFull(order.itemsSummary);
+  parsedItems.forEach(item => {
+    const idx = PRODUCTS.findIndex(p => p.name === item.name);
+    if (idx !== -1) quantities[idx] = item.qty;
+  });
+  renderProducts();
+
+  // Delivery charges
+  document.getElementById('deliveryCharges').value =
+    Number(order.deliveryCharges) > 0 ? order.deliveryCharges : '';
+
+  // Discount: stored as ₹ amount — reverse to percentage
+  const productsTotal = parsedItems.reduce((s, i) => s + i.lineTotal, 0);
+  const discountAmt   = Number(order.discount) || 0;
+  if (discountAmt > 0 && productsTotal > 0) {
+    document.getElementById('discountPercent').value =
+      parseFloat(((discountAmt / productsTotal) * 100).toFixed(2));
+  } else {
+    document.getElementById('discountPercent').value = '';
+  }
+
+  updateTotals();
+
+  // Dispatch dates
+  const dispatch = _parseDispatchRange(order.dispatchDate);
+  document.getElementById('dispatchFrom').value = dispatch.from || todayISO();
+  document.getElementById('dispatchTo').value   = dispatch.to   || '';
+
+  // Other fields
+  document.getElementById('deliveryType').value = order.deliveryType || 'Local';
+  document.getElementById('mapLink').value      = order.mapLink      || '';
+  document.getElementById('remarks').value      = order.remarks      || '';
+
+  // Clear validation errors
+  ['nameError','phoneError','emailError'].forEach(id => {
+    document.getElementById(id).textContent = '';
+  });
+  ['custName','custPhone','custEmail'].forEach(id => {
+    document.getElementById(id).classList.remove('invalid');
+  });
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 /* ---- Bill generation event handler ---- */
 
 let lastBillFilename = 'CozyCatKitchen-Bill.png';
@@ -235,8 +329,11 @@ export function initNewBill() {
     const productsTotal = selected.reduce((s, p) => s + p.lineTotal, 0);
     const discountAmount = Math.round(productsTotal * discountPercent / 100);
     const grandTotal = productsTotal + deliveryCharges - discountAmount;
-    const billNo = genBillNo();
-    const dateStr = new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+    const isEdit  = !!_editOrder;
+    const billNo  = isEdit ? _editOrder.billNo : genBillNo();
+    const dateStr = isEdit
+      ? String(_editOrder.date)
+      : new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
     const dispatchDateDisplay = formatDispatchRange(dispatchFromRaw, dispatchToRaw);
 
     document.getElementById('bNo').textContent = billNo;
@@ -293,20 +390,31 @@ export function initNewBill() {
 
     lastBillFilename = `CCK-${billNo}.png`;
     lastBillNo = billNo;
-    lastShareToken = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+    lastShareToken = isEdit
+      ? (_editOrder.shareToken || lastShareToken)
+      : ((typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2));
 
     document.getElementById('billOverlay').classList.add('show');
     document.getElementById('overlayActionsWrap').style.display = 'block';
     positionOverlayActions();
 
-    logToSheet({
-      billNo, dateStr, name, phone, email, address,
-      items: selected, totalItems, totalAmount: grandTotal,
-      deliveryCharges, discount: discountAmount, dispatchDateDisplay, remarks,
-      generatedBy: currentUser || '',
-      mapLink, deliveryType,
-      shareToken: lastShareToken
-    });
+    if (isEdit) {
+      updateOrderInSheet({
+        billNo, name, phone, email, address,
+        items: selected, totalItems, totalAmount: grandTotal,
+        deliveryCharges, discount: discountAmount, dispatchDateDisplay, remarks,
+        generatedBy: currentUser || '', mapLink, deliveryType
+      });
+    } else {
+      logToSheet({
+        billNo, dateStr, name, phone, email, address,
+        items: selected, totalItems, totalAmount: grandTotal,
+        deliveryCharges, discount: discountAmount, dispatchDateDisplay, remarks,
+        generatedBy: currentUser || '',
+        mapLink, deliveryType,
+        shareToken: lastShareToken
+      });
+    }
     invalidateOrders();
 
     setStatus('', '');
@@ -333,9 +441,7 @@ export function initNewBill() {
     }
   });
 
-  document.getElementById('newOrderBtn').addEventListener('click', () => {
-    document.getElementById('billOverlay').classList.remove('show');
-    document.getElementById('generateBtn').disabled = false;
+  function _resetForm() {
     ['custName','custPhone','custEmail','custAddress','remarks','deliveryCharges','discountPercent','dispatchTo','mapLink']
       .forEach(id => { document.getElementById(id).value = ''; });
     document.getElementById('dispatchFrom').value = todayISO();
@@ -346,7 +452,19 @@ export function initNewBill() {
     renderProducts();
     updateTotals();
     setStatus('', '');
+    _clearEditState();
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  document.getElementById('newOrderBtn').addEventListener('click', () => {
+    document.getElementById('billOverlay').classList.remove('show');
+    document.getElementById('generateBtn').disabled = false;
+    _resetForm();
+  });
+
+  document.getElementById('cancelEditBtn').addEventListener('click', () => {
+    document.getElementById('generateBtn').disabled = false;
+    _resetForm();
   });
 
   document.getElementById('downloadBtn').addEventListener('click', async () => {
