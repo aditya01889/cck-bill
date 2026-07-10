@@ -152,6 +152,9 @@ let lastBillNo = '';
 let lastShareToken = '';
 
 export function initNewBill() {
+  document.getElementById('deliveryCharges').addEventListener('input', updateTotals);
+  document.getElementById('discountAmount').addEventListener('input', updateTotals);
+
   document.getElementById('generateBtn').addEventListener('click', () => {
     document.getElementById('generateBtn').disabled = true;
     const name = document.getElementById('custName').value.trim();
