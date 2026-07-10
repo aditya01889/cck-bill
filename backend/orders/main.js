@@ -19,7 +19,9 @@ function doPost(e) {
     }
 
     if (data.action === 'updateOrder') {
-      return updateOrder(data);
+      var result = updateOrder(data);
+      maybeBackupOnWrite_();
+      return result;
     }
 
     if (data.action === 'saveCatalog') {
@@ -61,6 +63,7 @@ function doPost(e) {
       lock.releaseLock();
     }
 
+    maybeBackupOnWrite_();
     return jsonResponse({ status: 'success' });
   } catch (err) {
     return jsonResponse({ status: 'error', message: err.toString() });
