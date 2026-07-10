@@ -342,7 +342,14 @@ function openOrderDetail(billNo) {
   });
   document.getElementById('detailShareBillBtn').addEventListener('click', () => reshareOrderBill(o));
   document.getElementById('detailEditBillBtn').addEventListener('click', () => {
-    closeOrderDetail();
+    const ov = document.getElementById('orderDetailOverlay');
+    if (ov.classList.contains('show')) {
+      ov.classList.remove('show');
+      // Replace the modal history entry instead of going back, so that
+      // loadOrderForEdit's navigateTo('newbill') push lands cleanly and the
+      // browser back button from the edit form returns to the orders tab.
+      if (history.state && history.state.modal) history.replaceState(null, '');
+    }
     loadOrderForEdit(o);
   });
   const reminderBtn = document.getElementById('detailReminderBtn');
