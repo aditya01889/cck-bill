@@ -78,6 +78,8 @@ export function updateTotals() {
   const deliveryCharges = parseFloat(document.getElementById('deliveryCharges').value) || 0;
   const discountPercent = parseFloat(document.getElementById('discountPercent').value) || 0;
   const discountAmount  = Math.round(productsTotal * discountPercent / 100);
+  const rupeeSpan = document.getElementById('discountRupees');
+  rupeeSpan.textContent = discountAmount > 0 ? `−₹${discountAmount.toLocaleString('en-IN')}` : '';
   document.getElementById('totalItems').textContent = items;
   document.getElementById('totalAmount').textContent = (productsTotal + deliveryCharges - discountAmount).toLocaleString('en-IN');
 }
