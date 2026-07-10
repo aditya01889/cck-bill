@@ -52,6 +52,7 @@
   <button class="tab" data-tab="dashboard" id="tabDashboard">Dashboard</button>
   <button class="tab" data-tab="newbill" id="tabNewBill">New Bill</button>
   <button class="tab" data-tab="orders" id="tabOrders">Orders</button>
+  <button class="tab" data-tab="customers" id="tabCustomers">Customers</button>
   <button class="tab" data-tab="ingredients" id="tabIngredients">Ingredients</button>
   <button class="tab" data-tab="settings" id="tabSettings">Settings</button>
 </nav>
@@ -268,6 +269,16 @@
 </div>
 </div><!-- /#tab-orders -->
 
+<div id="tab-customers" class="tab-panel">
+<div class="wrap">
+  <div class="section-label" style="margin-top:24px;">Customer Directory</div>
+  <div class="field">
+    <input type="search" id="customerSearch" placeholder="Search by name or phone…" autocomplete="off">
+  </div>
+  <div id="customersList"><div class="orders-loading">Loading customers…</div></div>
+</div>
+</div><!-- /#tab-customers -->
+
 <div id="tab-ingredients" class="tab-panel">
 <div class="wrap">
   <div class="section-label" style="margin-top:24px;">Ingredient Calculator</div>
@@ -318,6 +329,17 @@
       <button id="closeOrderDetailBtn" class="order-detail-close">&#x2715;</button>
     </div>
     <div id="orderDetailContent"></div>
+  </div>
+</div>
+
+<!-- CUSTOMER DETAIL OVERLAY -->
+<div id="customerDetailOverlay" class="order-detail-overlay">
+  <div class="order-detail-sheet">
+    <div class="order-detail-header">
+      <div class="order-detail-title">Customer</div>
+      <button id="closeCustomerDetailBtn" class="order-detail-close">&#x2715;</button>
+    </div>
+    <div id="customerDetailContent"></div>
   </div>
 </div>
 

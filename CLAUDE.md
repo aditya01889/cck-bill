@@ -72,7 +72,17 @@ The PR base must always be `dev`.
 ├── features/
 │   ├── newbill.js          # New-bill form, bill card generation, QR, sharing
 │   ├── orders.js           # Orders tab: list, filters, detail, fulfillment, reshare
-│   └── dashboard.js        # Dashboard: revenue charts, top customers, trends
+│   ├── customers.js        # Customer directory: searchable list, per-customer detail + order history
+│   ├── dashboard.js        # Dashboard: revenue charts, top customers, trends
+│   ├── ingredients.js      # Ingredient calculator (buying list + making ratios)
+│   └── settings.js         # Settings tab
+├── scripts/
+│   └── clasp-deploy.js     # Node script: clasp push + deploy for any backend/env combo
+├── deploy.config.json      # Single source of truth for all backend deployment IDs + clasp configs
+├── .github/
+│   └── workflows/
+│       ├── deploy-staging.yml     # Auto-deploys backends to staging on CI success on dev
+│       └── deploy-production.yml  # Auto-deploys backends to production on CI success on main
 ├── backend/
 │   └── orders/             # Google Apps Script project (Orders + Customers + Auth)
 │       ├── main.js         # doGet / doPost entry points
@@ -172,12 +182,13 @@ Frontend (newbill.js)
 
 ## Products catalog
 
-Defined in `core/config.js` as a `PRODUCT_CATALOG` array of category objects.
-Each category has a `products` array. Combo categories have `comboCategory: true`
-— products with `price` (single price) expand directly; products with
+Defined in `core/config.js` as the `CATALOG` array of category objects.
+Each category has an `items` array. Combo categories have `comboCategory: true`
+— items with `price` (single price) expand directly; items with
 `price24`/`price60` expand into two SKUs (Pack of 24, Pack of 60).
+`PRODUCTS` is the flat array derived from `CATALOG` (export both).
 
-**To add a product**: edit `PRODUCT_CATALOG` in `core/config.js`. No backend change needed.
+**To add a product**: edit `CATALOG` in `core/config.js`. No backend change needed.
 
 Product weights (for courier pickup request) are in `PRODUCT_WEIGHTS` in `core/config.js`.
 
@@ -214,19 +225,33 @@ Product weights (for courier pickup request) are in `PRODUCT_WEIGHTS` in `core/c
 ## npm scripts
 
 ```
-npm run clasp:push:orders              # push backend to production Apps Script
-npm run clasp:push:orders:staging      # push backend to staging Apps Script
-npm run test:backend                   # run 15 unit tests (Node --test)
+# Backend deploy (push + redeploy — use these, not raw clasp commands)
+npm run deploy:all:prod                # push + redeploy all backends to production
+npm run deploy:all:staging             # push + redeploy all backends to staging
+npm run deploy:orders:prod             # push + redeploy orders backend to production
+npm run deploy:orders:staging          # push + redeploy orders backend to staging
+npm run deploy:ingredients:prod        # push + redeploy ingredients backend to production
+
+# Raw clasp (push code only — does NOT update the live deployment)
+npm run clasp:push:orders              # push orders backend to production Apps Script
+npm run clasp:push:orders:staging      # push orders backend to staging Apps Script
+
+# Tests
+npm run test:backend                   # run unit tests (Node --test)
 npx playwright test                    # run E2E smoke tests
 ```
 
+GitHub Actions auto-runs `deploy:all:staging` after CI passes on `dev` and
+`deploy:all:prod` after CI passes on `main`. Manual deploys are only needed
+locally or when the workflow didn't run.
+
 ---
 
-## Completed features (on `dev`, not yet released to `main`)
+## Completed features (released to `main` unless noted)
 
 - **Auth**: per-user login, SHA-256+salt, JWT-style tokens
 - **New bill**: product catalog, quantities, delivery charges, discount (%), QR payment code, bill image generation, sharing
-- **Bill card inline discount**: shows "Discount (X%) −₹YYY" row when discount > 0
+- **Bill card inline discount**: shows "Discount (X%) −₹YYY" row when discount > 0; stored as ₹ amount in Orders sheet `Discount` optional column
 - **Inline form validation**: name required, phone 10 digits, email format — on blur, not on submit
 - **Dispatch date defaults**: From defaults to today; To cannot be before From
 - **Orders tab**: list, search, payment status update, fulfillment update (with courier pickup request generator), payment proof upload, order detail view, reshare bill
@@ -236,20 +261,20 @@ npx playwright test                    # run E2E smoke tests
 - **Customer tracking page** (`/track`): public page scoped by share token
 - **Starter Kit (Assorted Pack of 12)** at ₹1670 — first item in Cozy Meals Combos
 - **Staging backend**: separate sheet + Apps Script deployment, `IS_PROD` URL fork
+- **Automated backend deploys** via GitHub Actions: CI success on `dev` → staging deploy; CI success on `main` → production deploy. Configured in `deploy.config.json`, driven by `scripts/clasp-deploy.js`
+- **Customer directory** *(on `dev`, pending release)*: Customers tab with searchable list (name/phone); tap a card to open detail sheet showing customer info, total orders + total spent, and full order history filtered from `ordersState.cache`
 
 ---
 
 ## Feature backlog (priority order)
 
-1. **Customer directory** — tab with searchable customer list; clicking a customer shows their full order history (filter `ordersState.cache` by name client-side). Backend: `getCustomers` already exists (`action=customers`). Sheet: Customers sheet auto-maintained by `upsertCustomer`.
+1. **Sales report / CSV export** — date-range picker, summary stats, downloadable CSV of filtered orders.
 
-2. **Sales report / CSV export** — date-range picker, summary stats, downloadable CSV of filtered orders.
+2. **Edit an existing bill** — load an existing order into the form, modify, re-save (update row in sheet, not append).
 
-3. **Edit an existing bill** — load an existing order into the form, modify, re-save (update row in sheet, not append).
+3. **Product & price management UI** — add/edit/remove products from the UI; currently requires editing `core/config.js` directly.
 
-4. **Product & price management UI** — add/edit/remove products from the UI; currently requires editing `core/config.js` directly.
-
-5. **Payment reminders** — WhatsApp deep-link to send a payment reminder message to customers with Pending status.
+4. **Payment reminders** — WhatsApp deep-link to send a payment reminder message to customers with Pending status.
 
 ---
 

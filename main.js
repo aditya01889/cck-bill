@@ -10,6 +10,7 @@ import { loadDashboard, renderDashboard } from '/features/dashboard.js';
 import { loadOrders, initOrders } from '/features/orders.js';
 import { loadIngredientTab, loadIngMatrix, initIngredients } from '/features/ingredients.js';
 import { loadSettings } from '/features/settings.js';
+import { loadCustomers, initCustomers } from '/features/customers.js';
 
 /* ---- Global error visibility ---- */
 
@@ -78,6 +79,7 @@ setReloginCallback(showLogin);
 /* ---- Register tab handlers ---- */
 registerTabHandler('dashboard', loadDashboard);
 registerTabHandler('orders', () => loadOrders());
+registerTabHandler('customers', loadCustomers);
 registerTabHandler('ingredients', loadIngredientTab);
 registerTabHandler('settings', loadSettings);
 
@@ -110,6 +112,7 @@ document.querySelectorAll('.tab-bar .tab').forEach(btn => {
 // Init feature-specific event handlers
 initNewBill();
 initOrders();
+initCustomers();
 initIngredients();
 
 /* ---- Session restore on page load ---- */
