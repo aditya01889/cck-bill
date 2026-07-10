@@ -162,6 +162,34 @@ export function initNewBill() {
   document.getElementById('deliveryCharges').addEventListener('input', updateTotals);
   document.getElementById('discountPercent').addEventListener('input', updateTotals);
 
+  function setFieldError(inputId, errorId, msg) {
+    const input = document.getElementById(inputId);
+    const err   = document.getElementById(errorId);
+    if (msg) { err.textContent = msg; input.classList.add('invalid'); }
+    else      { err.textContent = '';  input.classList.remove('invalid'); }
+  }
+
+  const nameInput  = document.getElementById('custName');
+  const phoneInput = document.getElementById('custPhone');
+  const emailInput = document.getElementById('custEmail');
+
+  nameInput.addEventListener('blur', () => {
+    setFieldError('custName', 'nameError', nameInput.value.trim() ? '' : 'Name is required.');
+  });
+  nameInput.addEventListener('input', () => setFieldError('custName', 'nameError', ''));
+
+  phoneInput.addEventListener('blur', () => {
+    const v = phoneInput.value.trim().replace(/[\s\-]/g, '');
+    setFieldError('custPhone', 'phoneError', v && !/^\d{10}$/.test(v) ? 'Enter a valid 10-digit number.' : '');
+  });
+  phoneInput.addEventListener('input', () => setFieldError('custPhone', 'phoneError', ''));
+
+  emailInput.addEventListener('blur', () => {
+    const v = emailInput.value.trim();
+    setFieldError('custEmail', 'emailError', v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? 'Enter a valid email address.' : '');
+  });
+  emailInput.addEventListener('input', () => setFieldError('custEmail', 'emailError', ''));
+
   const fromInput = document.getElementById('dispatchFrom');
   const toInput   = document.getElementById('dispatchTo');
   fromInput.value = todayISO();
@@ -311,6 +339,8 @@ export function initNewBill() {
     ['custName','custPhone','custEmail','custAddress','remarks','deliveryCharges','discountPercent','dispatchTo','mapLink']
       .forEach(id => { document.getElementById(id).value = ''; });
     document.getElementById('dispatchFrom').value = todayISO();
+    [['custName','nameError'],['custPhone','phoneError'],['custEmail','emailError']]
+      .forEach(([i,e]) => setFieldError(i, e, ''));
     document.getElementById('deliveryType').value = 'Local';
     quantities = PRODUCTS.map(() => 0);
     renderProducts();
