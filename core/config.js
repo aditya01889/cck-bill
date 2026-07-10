@@ -57,14 +57,14 @@ export const CATALOG = [
     category: "Cozy Meals Combos",
     comboCategory: true,
     items: [
+      { name: "Starter Kit (Assorted Pack of 12)", price: 1670 },
       { name: "Vitality",                 price24: 2330, price60: 4850 },
       { name: "Nourish",                  price24: 2330, price60: 4850 },
       { name: "Supreme",                  price24: 2690, price60: 5750 },
       { name: "Power",                    price24: 2690, price60: 5750 },
       { name: "Nurture",                  price24: 3050, price60: 6650 },
       { name: "Thrive",                   price24: 3050, price60: 6650 },
-      { name: "Assorted (4 Each/10 Each)", name24: "Assorted (Pack of 24 / 4 Each)", name60: "Assorted (Pack of 60 / 10 Each)", price24: 2690, price60: 5750 },
-      { name: "Starter Kit (Assorted Pack of 12)", price: 1670 }
+      { name: "Assorted (4 Each/10 Each)", name24: "Assorted (Pack of 24 / 4 Each)", name60: "Assorted (Pack of 60 / 10 Each)", price24: 2690, price60: 5750 }
     ]
   },
   {
