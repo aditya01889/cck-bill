@@ -463,12 +463,15 @@
   /* ---- Tab bar ---- */
   .tab-bar{
     display:flex;
+    overflow-x:auto;
+    scrollbar-width:none;
     border-bottom:2px solid var(--line);
     background:var(--paper);
-    padding:0 16px;
+    padding:0 8px;
   }
+  .tab-bar::-webkit-scrollbar{display:none;}
   .tab-bar .tab{
-    flex:1;padding:13px 8px;
+    flex-shrink:0;white-space:nowrap;padding:13px 10px;
     border:none;background:none;
     font-family:'Quicksand',sans-serif;
     font-size:12.5px;font-weight:700;
@@ -678,6 +681,37 @@
     color:var(--ink);font-family:inherit;margin-bottom:10px;
   }
   .fulfillment-tracking-input:focus{outline:none;border-color:#5B7FD4;}
+
+  /* ---- Reports tab ---- */
+  .report-stats{
+    display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px;
+  }
+  .report-stat{
+    background:var(--paper);border:1px solid var(--line);
+    border-radius:8px;padding:12px;text-align:center;
+  }
+  .report-stat-val{
+    font-size:16px;font-weight:800;color:var(--rust-deep);
+    font-family:'Quicksand',sans-serif;
+  }
+  .report-stat-lbl{
+    font-size:10.5px;color:var(--muted);font-weight:700;
+    text-transform:uppercase;letter-spacing:0.06em;
+    font-family:'Quicksand',sans-serif;margin-top:3px;
+  }
+  .report-row{
+    display:flex;justify-content:space-between;align-items:flex-start;
+    padding:10px 0;border-bottom:1px solid var(--line);gap:8px;
+  }
+  .report-row:last-child{border-bottom:none;}
+  .report-row-left{flex:1;min-width:0;}
+  .report-row-name{font-size:14px;font-weight:700;color:var(--ink);}
+  .report-row-meta{font-size:11.5px;color:var(--muted);font-weight:600;margin-top:2px;}
+  .report-row-right{text-align:right;flex-shrink:0;}
+  .report-row-amt{
+    font-size:14px;font-weight:800;color:var(--rust-deep);
+    white-space:nowrap;margin-bottom:4px;
+  }
 
   /* ---- Customer directory ---- */
   .cust-card{

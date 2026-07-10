@@ -53,6 +53,7 @@
   <button class="tab" data-tab="newbill" id="tabNewBill">New Bill</button>
   <button class="tab" data-tab="orders" id="tabOrders">Orders</button>
   <button class="tab" data-tab="customers" id="tabCustomers">Customers</button>
+  <button class="tab" data-tab="reports" id="tabReports">Reports</button>
   <button class="tab" data-tab="ingredients" id="tabIngredients">Ingredients</button>
   <button class="tab" data-tab="settings" id="tabSettings">Settings</button>
 </nav>
@@ -278,6 +279,56 @@
   <div id="customersList"><div class="orders-loading">Loading customers…</div></div>
 </div>
 </div><!-- /#tab-customers -->
+
+<div id="tab-reports" class="tab-panel">
+<div class="wrap">
+  <div class="section-label" style="margin-top:24px;">Sales Report</div>
+
+  <div class="filter-row" style="margin-bottom:12px;">
+    <button class="report-chip filter-chip active" data-preset="month">This Month</button>
+    <button class="report-chip filter-chip" data-preset="lastmonth">Last Month</button>
+    <button class="report-chip filter-chip" data-preset="3months">Last 3 Months</button>
+    <button class="report-chip filter-chip" data-preset="all">All Time</button>
+  </div>
+
+  <div class="row2" style="margin-bottom:16px;">
+    <div class="field">
+      <label for="reportFrom">From</label>
+      <input type="date" id="reportFrom">
+    </div>
+    <div class="field">
+      <label for="reportTo">To</label>
+      <input type="date" id="reportTo">
+    </div>
+  </div>
+
+  <div class="report-stats">
+    <div class="report-stat">
+      <div class="report-stat-val" id="reportCount">—</div>
+      <div class="report-stat-lbl">Orders</div>
+    </div>
+    <div class="report-stat">
+      <div class="report-stat-val" id="reportTotal">—</div>
+      <div class="report-stat-lbl">Revenue</div>
+    </div>
+    <div class="report-stat">
+      <div class="report-stat-val" id="reportPaid">—</div>
+      <div class="report-stat-lbl">Paid</div>
+    </div>
+    <div class="report-stat">
+      <div class="report-stat-val" id="reportAvg">—</div>
+      <div class="report-stat-lbl">Avg Order</div>
+    </div>
+  </div>
+
+  <div class="actions" style="margin:16px 0 4px;">
+    <button class="btn btn-primary" id="reportExportBtn">Download CSV</button>
+  </div>
+
+  <div class="section-label">Orders in Range</div>
+  <div id="reportOrdersList"><div class="orders-loading">Loading…</div></div>
+</div>
+</div><!-- /#tab-reports -->
 
 <div id="tab-ingredients" class="tab-panel">
 <div class="wrap">
