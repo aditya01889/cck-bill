@@ -50,6 +50,14 @@ const BILL_TO_INGREDIENT = {
     { product: "Supreme",  mult: 10 },
     { product: "Nurture",  mult: 10 },
     { product: "Thrive",   mult: 10 }
+  ],
+  "Starter Kit (Assorted Pack of 12)": [
+    { product: "Nourish",  mult: 2 },
+    { product: "Vitality", mult: 2 },
+    { product: "Power",    mult: 2 },
+    { product: "Supreme",  mult: 2 },
+    { product: "Nurture",  mult: 2 },
+    { product: "Thrive",   mult: 2 }
   ]
 };
 

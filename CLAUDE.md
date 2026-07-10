@@ -285,3 +285,42 @@ locally or when the workflow didn't run.
 - Passwords are never stored raw — SHA-256+salt hashes only
 - `clasp login` must be run by the user on their own machine
 - All write endpoints verify the auth token before processing
+
+---
+
+## Ingredients backend — shared secret requirement
+
+`INGREDIENTS_WEBHOOK_URL` in `core/config.js` is **not** environment-forked — both prod
+and staging hit the same ingredients Apps Script deployment. That backend verifies session
+tokens using its own `SERVER_SECRET`.
+
+**All three backends must share the same `SERVER_SECRET`:**
+- Prod orders (signs tokens on prod login)
+- Staging orders (signs tokens on staging login)
+- Ingredients (verifies tokens from both)
+
+If staging orders has a different secret (e.g. after running `setupServerSecret()` on a
+fresh project), staging tokens will fail verification against the ingredients backend and
+the matrix will silently return `{}` — every order shows "No ingredients found."
+
+**Fix / initial setup:** copy `SERVER_SECRET` from the **prod ingredients** Apps Script
+(Project Settings → Script Properties) and paste it into the **staging orders** Apps
+Script Script Properties (overwrite the existing value). Then log out / back in on
+staging so a new token is issued with the correct secret.
+
+**Do not create a separate staging ingredients sheet** — the matrix is read-only reference
+data that should be identical across environments. Forking it creates sync-drift risk with
+no real benefit unless you're actively iterating on recipes or the ingredients backend code.
+
+### Adding a new product to the ingredients tab
+
+When a new product is added to `core/config.js` CATALOG, **also add it to
+`BILL_TO_INGREDIENT` in `features/ingredients.js`**, mapping the bill product name to its
+matrix product(s) and per-unit multipliers. Without this entry the product is silently
+skipped in ingredient calculations.
+
+- Single SKU (e.g. `"Bone Rich"`) → maps to itself with `mult: 1`
+- Combo that breaks into units (e.g. `"Starter Kit (Assorted Pack of 12)"`) → maps to
+  each component product with the correct per-unit `mult`
+- The matrix product names must match column A of the `Product_Ingredient_Matrix` sheet
+  exactly (the backend reads them verbatim with `.trim()`)
