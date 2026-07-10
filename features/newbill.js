@@ -165,9 +165,13 @@ export function initNewBill() {
   const fromInput = document.getElementById('dispatchFrom');
   const toInput   = document.getElementById('dispatchTo');
   fromInput.value = todayISO();
+  toInput.min = fromInput.value;
   fromInput.addEventListener('change', () => {
     toInput.min = fromInput.value;
     if (toInput.value && toInput.value < fromInput.value) toInput.value = fromInput.value;
+  });
+  toInput.addEventListener('change', () => {
+    if (toInput.value && fromInput.value && toInput.value < fromInput.value) toInput.value = fromInput.value;
   });
 
   document.getElementById('generateBtn').addEventListener('click', () => {
