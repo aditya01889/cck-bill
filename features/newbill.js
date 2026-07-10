@@ -76,7 +76,8 @@ export function updateTotals() {
     amount += quantities[i] * p.price;
   });
   const deliveryCharges = parseFloat(document.getElementById('deliveryCharges').value) || 0;
-  amount += deliveryCharges;
+  const discountAmount  = parseFloat(document.getElementById('discountAmount').value)  || 0;
+  amount += deliveryCharges - discountAmount;
   document.getElementById('totalItems').textContent = items;
   document.getElementById('totalAmount').textContent = amount.toLocaleString('en-IN');
 }
@@ -159,6 +160,7 @@ export function initNewBill() {
     const address = document.getElementById('custAddress').value.trim();
     const remarks = document.getElementById('remarks').value.trim();
     const deliveryCharges = parseFloat(document.getElementById('deliveryCharges').value) || 0;
+    const discountAmount  = parseFloat(document.getElementById('discountAmount').value)  || 0;
     const dispatchFromRaw = document.getElementById('dispatchFrom').value;
     const dispatchToRaw = document.getElementById('dispatchTo').value;
     const mapLink = document.getElementById('mapLink').value.trim();
@@ -181,7 +183,7 @@ export function initNewBill() {
 
     const totalItems = selected.reduce((s, p) => s + p.qty, 0);
     const productsTotal = selected.reduce((s, p) => s + p.lineTotal, 0);
-    const grandTotal = productsTotal + deliveryCharges;
+    const grandTotal = productsTotal + deliveryCharges - discountAmount;
     const billNo = genBillNo();
     const dateStr = new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
     const dispatchDateDisplay = formatDispatchRange(dispatchFromRaw, dispatchToRaw);
@@ -213,6 +215,12 @@ export function initNewBill() {
     } else {
       document.getElementById('bDeliveryRow').style.display = 'none';
     }
+    if (discountAmount > 0) {
+      document.getElementById('bDiscountRow').style.display = 'flex';
+      document.getElementById('bDiscountAmt').textContent = discountAmount.toLocaleString('en-IN');
+    } else {
+      document.getElementById('bDiscountRow').style.display = 'none';
+    }
     document.getElementById('bGrandTotal').textContent = grandTotal.toLocaleString('en-IN');
 
     if (dispatchDateDisplay) {
@@ -242,7 +250,7 @@ export function initNewBill() {
     logToSheet({
       billNo, dateStr, name, phone, email, address,
       items: selected, totalItems, totalAmount: grandTotal,
-      deliveryCharges, dispatchDateDisplay, remarks,
+      deliveryCharges, discount: discountAmount, dispatchDateDisplay, remarks,
       generatedBy: currentUser || '',
       mapLink, deliveryType,
       shareToken: lastShareToken
@@ -276,7 +284,7 @@ export function initNewBill() {
   document.getElementById('newOrderBtn').addEventListener('click', () => {
     document.getElementById('billOverlay').classList.remove('show');
     document.getElementById('generateBtn').disabled = false;
-    ['custName','custPhone','custEmail','custAddress','remarks','deliveryCharges','dispatchFrom','dispatchTo','mapLink']
+    ['custName','custPhone','custEmail','custAddress','remarks','deliveryCharges','discountAmount','dispatchFrom','dispatchTo','mapLink']
       .forEach(id => { document.getElementById(id).value = ''; });
     document.getElementById('deliveryType').value = 'Local';
     quantities = PRODUCTS.map(() => 0);

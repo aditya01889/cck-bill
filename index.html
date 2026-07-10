@@ -133,9 +133,15 @@
   <div class="section-label">Products</div>
   <div id="productList"></div>
 
-  <div class="field" style="margin-top:18px;">
-    <label for="deliveryCharges">Delivery Charges (₹)</label>
-    <input type="number" id="deliveryCharges" inputmode="numeric" min="0" step="1" placeholder="0">
+  <div class="row2" style="margin-top:18px;">
+    <div class="field">
+      <label for="deliveryCharges">Delivery Charges (₹)</label>
+      <input type="number" id="deliveryCharges" inputmode="numeric" min="0" step="1" placeholder="0">
+    </div>
+    <div class="field">
+      <label for="discountAmount">Discount (₹)</label>
+      <input type="number" id="discountAmount" inputmode="numeric" min="0" step="1" placeholder="0">
+    </div>
   </div>
 
   <div class="totals">
@@ -339,6 +345,10 @@
       <div class="bill-delivery" id="bDeliveryRow" style="display:none;">
         <span>Delivery Charges</span>
         <span>₹<span id="bDeliveryAmt">0</span></span>
+      </div>
+      <div class="bill-discount" id="bDiscountRow" style="display:none;">
+        <span>Discount</span>
+        <span>−₹<span id="bDiscountAmt">0</span></span>
       </div>
 
       <div class="bill-grand">

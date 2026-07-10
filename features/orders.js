@@ -277,6 +277,8 @@ function openOrderDetail(billNo) {
   const emailHtml = o.email ? `<a href="mailto:${escapeHtml(o.email)}">${escapeHtml(o.email)}</a>` : '';
   const deliveryHtml = o.deliveryCharges && Number(o.deliveryCharges) > 0
     ? `<div class="detail-amount-row"><span>Delivery</span><span>₹${Number(o.deliveryCharges).toLocaleString('en-IN')}</span></div>` : '';
+  const discountHtml = o.discount && Number(o.discount) > 0
+    ? `<div class="detail-amount-row"><span>Discount</span><span>−₹${Number(o.discount).toLocaleString('en-IN')}</span></div>` : '';
   const itemsHtml = o.itemsSummary && String(o.itemsSummary).trim()
     ? `<div class="detail-row"><div class="detail-label">Items</div><div class="detail-value">${escapeHtml(String(o.itemsSummary))}</div></div>` : '';
   const dispatchHtml = o.dispatchDate && String(o.dispatchDate).trim()
@@ -296,6 +298,7 @@ function openOrderDetail(billNo) {
     <hr class="detail-divider">
     ${itemsHtml}
     ${deliveryHtml}
+    ${discountHtml}
     <div class="detail-grand"><span>Total</span><span class="amt">₹${Number(o.totalAmount).toLocaleString('en-IN')}</span></div>
     ${extraSection}
     <hr class="detail-divider">
@@ -370,6 +373,7 @@ async function reshareOrderBill(o) {
   }
 
   const deliveryCharges = Number(o.deliveryCharges) || 0;
+  const discountAmount = Number(o.discount) || 0;
   const grandTotal = Number(o.totalAmount) || 0;
 
   document.getElementById('bNo').textContent = o.billNo;
@@ -397,6 +401,12 @@ async function reshareOrderBill(o) {
     document.getElementById('bDeliveryAmt').textContent = deliveryCharges.toLocaleString('en-IN');
   } else {
     document.getElementById('bDeliveryRow').style.display = 'none';
+  }
+  if (discountAmount > 0) {
+    document.getElementById('bDiscountRow').style.display = 'flex';
+    document.getElementById('bDiscountAmt').textContent = discountAmount.toLocaleString('en-IN');
+  } else {
+    document.getElementById('bDiscountRow').style.display = 'none';
   }
   document.getElementById('bGrandTotal').textContent = grandTotal.toLocaleString('en-IN');
 
