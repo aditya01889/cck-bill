@@ -135,6 +135,53 @@ function getOrderByBill(billNo, token) {
   }
 }
 
+function updateOrder(data) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var lastRow = sheet.getLastRow();
+    if (lastRow <= 1) return jsonResponse({ status: 'error', message: 'Order not found' });
+
+    var cm = buildColMap_(sheet, ORDER_COLS, ORDER_OPTIONAL_COLS);
+    var billNos = sheet.getRange(2, cm.billNo + 1, lastRow - 1, 1).getValues();
+    var rowIndex = -1;
+    for (var i = 0; i < billNos.length; i++) {
+      if (String(billNos[i][0]).trim() === String(data.billNo).trim()) {
+        rowIndex = i + 2;
+        break;
+      }
+    }
+    if (rowIndex === -1) return jsonResponse({ status: 'error', message: 'Order not found: ' + data.billNo });
+
+    var fields = {};
+    fields[cm.name]            = data.name || '';
+    fields[cm.phone]           = data.phone || '';
+    fields[cm.email]           = data.email || '';
+    fields[cm.address]         = data.address || '';
+    fields[cm.itemsSummary]    = data.itemsSummary || '';
+    fields[cm.totalItems]      = Number(data.totalItems) || 0;
+    fields[cm.deliveryCharges] = Number(data.deliveryCharges) || 0;
+    fields[cm.totalAmount]     = Number(data.totalAmount) || 0;
+    fields[cm.dispatchDate]    = data.dispatchDate || '';
+    fields[cm.remarks]         = data.remarks || '';
+    fields[cm.mapLink]         = data.mapLink || '';
+    fields[cm.deliveryType]    = data.deliveryType || '';
+    if (cm.discount != null) fields[cm.discount] = Number(data.discount) || 0;
+
+    for (var col in fields) {
+      sheet.getRange(rowIndex, Number(col) + 1).setValue(fields[col]);
+    }
+
+    upsertCustomer(data.name || '', data.phone || '', data.email || '', data.address || '', '');
+    return jsonResponse({ status: 'success', billNo: data.billNo });
+  } catch (err) {
+    return jsonResponse({ status: 'error', message: err.toString() });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function updateFulfillment(billNo, fulfillmentStatus, trackingLink) {
   var valid = ['Packed', 'Booked', 'Picked Up', 'Delivered'];
   if (!billNo || valid.indexOf(fulfillmentStatus) === -1) {

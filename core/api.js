@@ -72,6 +72,47 @@ export async function prefetchCustomers() {
 
 /* ---- Bill logging ---- */
 
+export function updateOrderInSheet(data) {
+  if (!SHEET_WEBHOOK_URL) return;
+  const payload = {
+    action: 'updateOrder',
+    billNo: data.billNo,
+    name: data.name,
+    phone: data.phone,
+    email: data.email,
+    address: data.address,
+    itemsSummary: data.items.map(i => `${i.category}: ${i.name} x${i.qty} (₹${i.lineTotal})`).join('; '),
+    totalItems: data.totalItems,
+    totalAmount: data.totalAmount,
+    deliveryCharges: data.deliveryCharges || 0,
+    discount: data.discount || 0,
+    dispatchDate: data.dispatchDateDisplay || '',
+    remarks: data.remarks || '',
+    mapLink: data.mapLink || '',
+    deliveryType: data.deliveryType || '',
+    auth: _authToken
+  };
+  fetchWithTimeout(SHEET_WEBHOOK_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload)
+  }).then(res => res.json()).then(result => {
+    if (result && result.status === 'success') return;
+    if (result && result.message === 'Unauthorized') {
+      if (!tokenValid(_authToken)) {
+        forceRelogin();
+        showErrorToast(`Order ${data.billNo} was NOT updated — session expired. Please sign in again.`, { persist: true });
+      } else {
+        showErrorToast(`Order ${data.billNo} may not have been updated (server busy). Please check the orders sheet.`, { persist: true });
+      }
+      return;
+    }
+    showErrorToast(`Order ${data.billNo} may not have been updated (${(result && result.message) || 'unknown error'}).`, { persist: true });
+  }).catch(() => {
+    showErrorToast(`Order ${data.billNo} was NOT updated (network error). Please check the orders sheet.`, { persist: true });
+  });
+}
+
 export function logToSheet(data) {
   if (!SHEET_WEBHOOK_URL) return;
   const payload = {

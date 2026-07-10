@@ -4,7 +4,7 @@ import { escapeHtml } from '/core/dom.js';
 import { _authToken, authUrl } from '/core/auth.js';
 import { getOrders, invalidateOrders, uploadPaymentProof, parseItemsSummary } from '/core/api.js';
 import { ordersState } from '/core/state.js';
-import { renderBillToCanvas, generatePaymentQR } from '/features/newbill.js';
+import { renderBillToCanvas, generatePaymentQR, loadOrderForEdit } from '/features/newbill.js';
 
 /* ---- State ---- */
 let _selectedBillNo = null;
@@ -322,7 +322,10 @@ function openOrderDetail(billNo) {
     ${o.trackingLink && String(o.trackingLink).startsWith('http') ? `<div class="detail-row"><div class="detail-label">Tracking</div><div class="detail-value"><a href="${escapeHtml(String(o.trackingLink))}" target="_blank" rel="noopener">Track Order &#x2197;</a></div></div>` : ''}
     ${o.deliveryType ? `<div class="detail-row"><div class="detail-label">Delivery Type</div><div class="detail-value">${escapeHtml(String(o.deliveryType))}</div></div>` : ''}
     <hr class="detail-divider">
-    <button class="btn btn-secondary" id="detailShareBillBtn">Share Bill</button>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-secondary" id="detailShareBillBtn" style="flex:1">Share Bill</button>
+      <button class="btn btn-secondary" id="detailEditBillBtn" style="flex:1">Edit Bill</button>
+    </div>
   `;
 
   document.getElementById('detailUpdateStatusBtn').addEventListener('click', () => {
@@ -334,6 +337,10 @@ function openOrderDetail(billNo) {
     openFulfillmentPanel(o.billNo);
   });
   document.getElementById('detailShareBillBtn').addEventListener('click', () => reshareOrderBill(o));
+  document.getElementById('detailEditBillBtn').addEventListener('click', () => {
+    closeOrderDetail();
+    loadOrderForEdit(o);
+  });
   document.getElementById('orderDetailOverlay').classList.add('show');
 }
 
