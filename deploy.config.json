@@ -1,0 +1,28 @@
+{
+  "backends": [
+    {
+      "name": "orders",
+      "dir": "backend/orders",
+      "environments": {
+        "production": {
+          "claspConfig": ".clasp.json",
+          "deploymentId": "AKfycbxAiGRuOVaN61HJe8szgTGQlA1iun-mjO-3MmhTYW1Jwnyzfc9ZKAmCR9f281-BrZV2"
+        },
+        "staging": {
+          "claspConfig": ".clasp.staging.json",
+          "deploymentId": "AKfycbxsEeifaLyFs7_y48HlNdsITXjeVOcvnp0kKicxWRV4J5lEYg0gCPg7bJeaisAg6U9T"
+        }
+      }
+    },
+    {
+      "name": "ingredients",
+      "dir": "backend/ingredients",
+      "environments": {
+        "production": {
+          "claspConfig": ".clasp.json",
+          "deploymentId": ""
+        }
+      }
+    }
+  ]
+}
