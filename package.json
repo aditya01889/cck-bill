@@ -8,6 +8,7 @@
     "clasp:login": "clasp login",
     "clasp:pull:orders": "cd backend/orders && clasp pull",
     "clasp:push:orders": "cd backend/orders && clasp push",
+    "clasp:push:orders:staging": "cd backend/orders && clasp push --project .clasp.staging.json",
     "clasp:open:orders": "cd backend/orders && clasp open-script",
     "clasp:pull:ingredients": "cd backend/ingredients && clasp pull",
     "clasp:push:ingredients": "cd backend/ingredients && clasp push",
