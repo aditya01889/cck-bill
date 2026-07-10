@@ -326,6 +326,10 @@ function openOrderDetail(billNo) {
       <button class="btn btn-secondary" id="detailShareBillBtn" style="flex:1">Share Bill</button>
       <button class="btn btn-secondary" id="detailEditBillBtn" style="flex:1">Edit Bill</button>
     </div>
+    ${o.paymentStatus === 'Pending' && o.phone ? `
+    <button class="btn btn-whatsapp" id="detailReminderBtn" style="width:100%;margin-top:10px;">
+      WhatsApp Payment Reminder
+    </button>` : ''}
   `;
 
   document.getElementById('detailUpdateStatusBtn').addEventListener('click', () => {
@@ -341,6 +345,16 @@ function openOrderDetail(billNo) {
     closeOrderDetail();
     loadOrderForEdit(o);
   });
+  const reminderBtn = document.getElementById('detailReminderBtn');
+  if (reminderBtn) {
+    reminderBtn.addEventListener('click', () => {
+      const digits = String(o.phone).replace(/\D/g, '');
+      const waPhone = digits.length === 10 ? '91' + digits : digits;
+      const amt = Number(o.totalAmount).toLocaleString('en-IN');
+      const msg = `Hi ${o.name}! 🐾 Just a gentle reminder for your CozyCatKitchen order *${o.billNo}* of *₹${amt}*, which is currently awaiting payment. Kindly complete the payment at your earliest convenience. Thank you! 😊`;
+      window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener');
+    });
+  }
   document.getElementById('orderDetailOverlay').classList.add('show');
 }
 

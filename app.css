@@ -202,6 +202,8 @@
   .btn-primary:active{background:var(--rust-deep);}
   .btn-secondary{background:var(--paper);color:var(--ink);border:1.5px solid var(--ink);}
   .btn-secondary:active{background:var(--cream);}
+  .btn-whatsapp{background:#25d366;color:#fff;border:none;}
+  .btn-whatsapp:active{background:#1ebe5d;}
   .field-error{
     font-size:11.5px;
     color:var(--rust);
