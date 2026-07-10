@@ -236,6 +236,25 @@
   <div class="field">
     <input type="search" id="orderSearch" placeholder="Search by name or bill number…" autocomplete="off">
   </div>
+  <div class="orders-filters">
+    <div class="filter-row" id="paymentFilterRow">
+      <button class="filter-chip active" data-filter="payment" data-value="">All</button>
+      <button class="filter-chip" data-filter="payment" data-value="Pending">Pending</button>
+      <button class="filter-chip" data-filter="payment" data-value="Paid">Paid</button>
+      <button class="filter-chip" data-filter="payment" data-value="Refunded">Refunded</button>
+      <button class="filter-chip" data-filter="payment" data-value="Failed">Failed</button>
+      <button class="filter-chip" data-filter="payment" data-value="Cancelled">Cancelled</button>
+    </div>
+    <div class="filter-row" id="fulfillmentFilterRow">
+      <button class="filter-chip active" data-filter="fulfillment" data-value="">All</button>
+      <button class="filter-chip" data-filter="fulfillment" data-value="__none__">Not set</button>
+      <button class="filter-chip" data-filter="fulfillment" data-value="Packed">Packed</button>
+      <button class="filter-chip" data-filter="fulfillment" data-value="Booked">Booked</button>
+      <button class="filter-chip" data-filter="fulfillment" data-value="Picked Up">Picked Up</button>
+      <button class="filter-chip" data-filter="fulfillment" data-value="Delivered">Delivered</button>
+    </div>
+  </div>
+  <div id="dispatchView"></div>
   <div id="ordersList"><div class="orders-loading">Loading orders…</div></div>
 </div>
 </div><!-- /#tab-orders -->

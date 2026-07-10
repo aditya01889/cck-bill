@@ -9,8 +9,75 @@ import { renderBillToCanvas, generatePaymentQR } from '/features/newbill.js';
 /* ---- State ---- */
 let _selectedBillNo = null;
 let _fulfillmentOrder = null;
+let _filterPayment = '';
+let _filterFulfillment = '';
 
 /* ---- Helpers ---- */
+
+function parseDispatchDate(str) {
+  if (!str || !String(str).trim()) return null;
+  const part = String(str).split(/\s*[-–]\s/)[0].trim();
+  const d = new Date(part);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function applyFilters(orders, search) {
+  let result = orders;
+  if (search) {
+    const s = search.toLowerCase();
+    result = result.filter(o =>
+      String(o.billNo).toLowerCase().includes(s) || String(o.name).toLowerCase().includes(s));
+  }
+  if (_filterPayment) {
+    result = result.filter(o => (o.paymentStatus || '') === _filterPayment);
+  }
+  if (_filterFulfillment === '__none__') {
+    result = result.filter(o => !o.fulfillmentStatus || !String(o.fulfillmentStatus).trim());
+  } else if (_filterFulfillment) {
+    result = result.filter(o => (o.fulfillmentStatus || '') === _filterFulfillment);
+  }
+  return result;
+}
+
+function renderDispatchView(orders) {
+  const el = document.getElementById('dispatchView');
+  if (!el) return;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const cutoff = new Date(today); cutoff.setDate(cutoff.getDate() + 7);
+  const lookback = new Date(today); lookback.setDate(lookback.getDate() - 3);
+
+  const upcoming = orders.filter(o => {
+    if ((o.fulfillmentStatus || '').toLowerCase() === 'delivered') return false;
+    const d = parseDispatchDate(o.dispatchDate);
+    if (!d) return false;
+    d.setHours(0, 0, 0, 0);
+    return d >= lookback && d <= cutoff;
+  });
+
+  if (!upcoming.length) { el.innerHTML = ''; return; }
+
+  el.innerHTML = `
+    <div class="dispatch-queue">
+      <div class="dispatch-queue-header">Dispatch Queue <span class="dispatch-queue-count">${upcoming.length}</span></div>
+      ${upcoming.map(o => `
+        <div class="dispatch-queue-row" data-billno="${escapeHtml(o.billNo)}">
+          <div>
+            <div class="dispatch-queue-name">${escapeHtml(o.name)}</div>
+            <div class="dispatch-queue-date">${escapeHtml(String(o.dispatchDate))}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+            ${o.fulfillmentStatus ? `<span class="fulfillment-badge ${fulfillmentBadgeClass(o.fulfillmentStatus)}">${escapeHtml(o.fulfillmentStatus)}</span>` : ''}
+            <span style="font-size:13px;font-weight:800;color:var(--rust-deep);">₹${Number(o.totalAmount).toLocaleString('en-IN')}</span>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+
+  el.querySelectorAll('.dispatch-queue-row').forEach(row => {
+    row.addEventListener('click', () => openOrderDetail(row.dataset.billno));
+  });
+}
 
 function statusBadgeClass(s) {
   if (!s) return '';
@@ -402,12 +469,8 @@ export async function loadOrders(search) {
     document.getElementById('ordersList').innerHTML = '<div class="orders-empty">Could not load orders. Check your connection.</div>';
     return;
   }
-  if (search) {
-    const s = search.toLowerCase();
-    orders = orders.filter(o =>
-      String(o.billNo).toLowerCase().includes(s) || String(o.name).toLowerCase().includes(s));
-  }
-  renderOrders(orders);
+  renderDispatchView(orders);
+  renderOrders(applyFilters(orders, search));
 }
 
 /* ---- Wire event handlers (called once from main.js) ---- */
@@ -504,7 +567,25 @@ export function initOrders() {
   document.getElementById('orderSearch').addEventListener('input', () => {
     clearTimeout(_searchTimer);
     _searchTimer = setTimeout(() => {
-      loadOrders(document.getElementById('orderSearch').value.trim());
+      const search = document.getElementById('orderSearch').value.trim();
+      if (ordersState.cache.length) {
+        renderOrders(applyFilters(ordersState.cache, search));
+      } else {
+        loadOrders(search);
+      }
     }, 400);
+  });
+
+  document.querySelectorAll('.filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const group = chip.dataset.filter;
+      document.querySelectorAll(`.filter-chip[data-filter="${group}"]`).forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      if (group === 'payment') _filterPayment = chip.dataset.value;
+      else if (group === 'fulfillment') _filterFulfillment = chip.dataset.value;
+      if (ordersState.cache.length) {
+        renderOrders(applyFilters(ordersState.cache, document.getElementById('orderSearch').value.trim()));
+      }
+    });
   });
 }
