@@ -63,7 +63,8 @@ export const CATALOG = [
       { name: "Power",                    price24: 2690, price60: 5750 },
       { name: "Nurture",                  price24: 3050, price60: 6650 },
       { name: "Thrive",                   price24: 3050, price60: 6650 },
-      { name: "Assorted (4 Each/10 Each)", name24: "Assorted (Pack of 24 / 4 Each)", name60: "Assorted (Pack of 60 / 10 Each)", price24: 2690, price60: 5750 }
+      { name: "Assorted (4 Each/10 Each)", name24: "Assorted (Pack of 24 / 4 Each)", name60: "Assorted (Pack of 60 / 10 Each)", price24: 2690, price60: 5750 },
+      { name: "Starter Kit (Assorted Pack of 12)", price: 1670 }
     ]
   },
   {
@@ -86,10 +87,14 @@ export const PRODUCTS = [];
 CATALOG.forEach(cat => {
   cat.items.forEach(item => {
     if (cat.comboCategory) {
-      const n24 = item.name24 || `${item.name} (Pack of 24)`;
-      const n60 = item.name60 || `${item.name} (Pack of 60)`;
-      PRODUCTS.push({ name: n24, price: item.price24, category: cat.category });
-      PRODUCTS.push({ name: n60, price: item.price60, category: cat.category });
+      if (item.price !== undefined) {
+        PRODUCTS.push({ name: item.name, price: item.price, category: cat.category });
+      } else {
+        const n24 = item.name24 || `${item.name} (Pack of 24)`;
+        const n60 = item.name60 || `${item.name} (Pack of 60)`;
+        PRODUCTS.push({ name: n24, price: item.price24, category: cat.category });
+        PRODUCTS.push({ name: n60, price: item.price60, category: cat.category });
+      }
     } else {
       PRODUCTS.push({ name: item.name, price: item.price, category: cat.category });
     }
@@ -125,4 +130,5 @@ export const PRODUCT_WEIGHTS = {
   "Nourish (Pack of 60)": 4200, "Vitality (Pack of 60)": 4200, "Power (Pack of 60)": 4200,
   "Supreme (Pack of 60)": 4200, "Nurture (Pack of 60)": 4200, "Thrive (Pack of 60)": 4200,
   "Assorted (Pack of 60 / 10 Each)": 4200,
+  "Starter Kit (Assorted Pack of 12)": 840,
 };
