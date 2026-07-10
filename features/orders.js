@@ -1,6 +1,6 @@
 /* Orders tab — list, detail view, status/fulfillment updates, reshare. */
 import { SHEET_WEBHOOK_URL, BOXES, PRODUCT_WEIGHTS, SENDER_NAME, SENDER_ADDRESS, fetchWithTimeout } from '/core/config.js';
-import { escapeHtml } from '/core/dom.js';
+import { escapeHtml, openOverlay, closeOverlay } from '/core/dom.js';
 import { _authToken, authUrl } from '/core/auth.js';
 import { getOrders, invalidateOrders, uploadPaymentProof, parseItemsSummary } from '/core/api.js';
 import { ordersState } from '/core/state.js';
@@ -355,11 +355,11 @@ function openOrderDetail(billNo) {
       window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener');
     });
   }
-  document.getElementById('orderDetailOverlay').classList.add('show');
+  openOverlay(document.getElementById('orderDetailOverlay'));
 }
 
 function closeOrderDetail() {
-  document.getElementById('orderDetailOverlay').classList.remove('show');
+  closeOverlay(document.getElementById('orderDetailOverlay'));
 }
 
 export function openStatusPanel(billNo, currentStatus) {

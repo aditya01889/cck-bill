@@ -1,5 +1,5 @@
 /* Customer Directory — searchable list + per-customer detail sheet. */
-import { escapeHtml } from '/core/dom.js';
+import { escapeHtml, openOverlay, closeOverlay } from '/core/dom.js';
 import { prefetchCustomers } from '/core/api.js';
 import { customersState, ordersState } from '/core/state.js';
 
@@ -118,7 +118,7 @@ function openDetail(name) {
   }
 
   document.getElementById('customerDetailContent').innerHTML = html;
-  document.getElementById('customerDetailOverlay').classList.add('show');
+  openOverlay(document.getElementById('customerDetailOverlay'));
 }
 
 /* ---- Search / filter ---- */
@@ -151,9 +151,9 @@ export function initCustomers() {
 
   const overlay = document.getElementById('customerDetailOverlay');
   document.getElementById('closeCustomerDetailBtn').addEventListener('click', () => {
-    overlay.classList.remove('show');
+    closeOverlay(overlay);
   });
   overlay.addEventListener('click', e => {
-    if (e.target === overlay) overlay.classList.remove('show');
+    if (e.target === overlay) closeOverlay(overlay);
   });
 }

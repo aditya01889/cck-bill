@@ -1,6 +1,6 @@
 /* New Bill feature — product list, bill generation, QR, sharing. */
 import { PRODUCTS, UPI_ID, UPI_PAYEE_NAME } from '/core/config.js';
-import { escapeHtml, setStatus } from '/core/dom.js';
+import { escapeHtml, setStatus, openOverlay, closeOverlay } from '/core/dom.js';
 import { _authToken, currentUser } from '/core/auth.js';
 import { logToSheet, invalidateOrders, parseItemsFull, updateOrderInSheet } from '/core/api.js';
 import { navigateTo } from '/core/router.js';
@@ -394,7 +394,7 @@ export function initNewBill() {
       ? (_editOrder.shareToken || lastShareToken)
       : ((typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2));
 
-    document.getElementById('billOverlay').classList.add('show');
+    openOverlay(document.getElementById('billOverlay'));
     document.getElementById('overlayActionsWrap').style.display = 'block';
     positionOverlayActions();
 
@@ -421,7 +421,7 @@ export function initNewBill() {
   });
 
   document.getElementById('closeOverlay').addEventListener('click', () => {
-    document.getElementById('billOverlay').classList.remove('show');
+    closeOverlay(document.getElementById('billOverlay'));
     document.getElementById('generateBtn').disabled = false;
   });
 
@@ -457,7 +457,7 @@ export function initNewBill() {
   }
 
   document.getElementById('newOrderBtn').addEventListener('click', () => {
-    document.getElementById('billOverlay').classList.remove('show');
+    closeOverlay(document.getElementById('billOverlay'));
     document.getElementById('generateBtn').disabled = false;
     _resetForm();
   });

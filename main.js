@@ -117,6 +117,14 @@ document.querySelectorAll('.tab-bar .tab').forEach(btn => {
   btn.addEventListener('click', () => navigateTo(btn.dataset.tab));
 });
 
+// Close any visible overlay on browser back instead of navigating behind it
+window.addEventListener('popstate', () => {
+  ['orderDetailOverlay', 'customerDetailOverlay', 'billOverlay'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.classList.contains('show')) el.classList.remove('show');
+  });
+});
+
 // Init feature-specific event handlers
 initNewBill();
 initOrders();
