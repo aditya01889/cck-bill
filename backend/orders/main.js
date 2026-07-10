@@ -22,6 +22,10 @@ function doPost(e) {
       return updateOrder(data);
     }
 
+    if (data.action === 'saveCatalog') {
+      return saveCatalog(data);
+    }
+
     // New order creation — lock covers both the appendRow and the customer upsert
     // so concurrent submissions don't interleave rows in either sheet.
     var lock = LockService.getScriptLock();
@@ -76,7 +80,7 @@ function doGet(e) {
     return logClientError_(e.parameter);
   }
 
-  var PROTECTED = { orders: 1, customers: 1, updateStatus: 1, updateFulfillment: 1 };
+  var PROTECTED = { orders: 1, customers: 1, updateStatus: 1, updateFulfillment: 1, getCatalog: 1 };
   if (PROTECTED[action] && !verifyToken_(e.parameter.auth)) {
     return jsonResponse({ status: 'error', message: 'Unauthorized' });
   }
@@ -96,6 +100,9 @@ function doGet(e) {
   }
   if (action === 'customers') {
     return getCustomers();
+  }
+  if (action === 'getCatalog') {
+    return getCatalog();
   }
 
   return ContentService.createTextOutput('CozyCatKitchen order logger is running.');

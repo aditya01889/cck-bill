@@ -1,6 +1,6 @@
 /* All backend calls + shared data-parsing utilities.
    This is the single seam between the app and Google Apps Script. */
-import { SHEET_WEBHOOK_URL, fetchWithTimeout } from '/core/config.js';
+import { SHEET_WEBHOOK_URL, fetchWithTimeout, _rebuildProducts } from '/core/config.js';
 import { _authToken, currentUser, tokenValid, authUrl, forceRelogin } from '/core/auth.js';
 import { showErrorToast } from '/core/dom.js';
 import { ordersState, customersState, invalidateOrders } from '/core/state.js';
@@ -68,6 +68,30 @@ export async function prefetchCustomers() {
       customersState.loaded = true;
     }
   } catch (e) { /* silent */ }
+}
+
+/* ---- Catalog ---- */
+
+export async function initCatalog() {
+  if (!SHEET_WEBHOOK_URL) return;
+  try {
+    const res = await fetchWithTimeout(authUrl(`${SHEET_WEBHOOK_URL}?action=getCatalog`), {}, 5000);
+    const data = await res.json();
+    if (data.status === 'success' && data.catalog) {
+      _rebuildProducts(data.catalog);
+    }
+  } catch(e) { /* keep hardcoded defaults */ }
+}
+
+export function saveCatalogToServer(catalog) {
+  return fetchWithTimeout(SHEET_WEBHOOK_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: 'saveCatalog', catalog: catalog ?? null, auth: _authToken })
+  }).then(res => res.json()).then(result => {
+    if (result && result.status === 'success') return;
+    throw new Error((result && result.message) || 'Save failed');
+  });
 }
 
 /* ---- Bill logging ---- */
