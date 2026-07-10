@@ -40,3 +40,20 @@ export function escapeHtml(str) {
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[c]));
 }
+
+/* ---- Overlay / modal history helpers ---- */
+// Push a history entry when opening so the back button closes the overlay
+// instead of navigating away from the page.
+
+export function openOverlay(el) {
+  el.classList.add('show');
+  history.pushState({ modal: el.id }, '');
+}
+
+export function closeOverlay(el) {
+  if (!el.classList.contains('show')) return;
+  el.classList.remove('show');
+  // If this overlay pushed the current history entry, go back so the
+  // browser's history stack stays in sync.
+  if (history.state && history.state.modal) history.back();
+}
