@@ -70,16 +70,16 @@ export function renderProducts() {
 }
 
 export function updateTotals() {
-  let items = 0, amount = 0;
+  let items = 0, productsTotal = 0;
   PRODUCTS.forEach((p, i) => {
     items += quantities[i];
-    amount += quantities[i] * p.price;
+    productsTotal += quantities[i] * p.price;
   });
   const deliveryCharges = parseFloat(document.getElementById('deliveryCharges').value) || 0;
-  const discountAmount  = parseFloat(document.getElementById('discountAmount').value)  || 0;
-  amount += deliveryCharges - discountAmount;
+  const discountPercent = parseFloat(document.getElementById('discountPercent').value) || 0;
+  const discountAmount  = Math.round(productsTotal * discountPercent / 100);
   document.getElementById('totalItems').textContent = items;
-  document.getElementById('totalAmount').textContent = amount.toLocaleString('en-IN');
+  document.getElementById('totalAmount').textContent = (productsTotal + deliveryCharges - discountAmount).toLocaleString('en-IN');
 }
 
 /* ---- Utilities ---- */
@@ -153,7 +153,7 @@ let lastShareToken = '';
 
 export function initNewBill() {
   document.getElementById('deliveryCharges').addEventListener('input', updateTotals);
-  document.getElementById('discountAmount').addEventListener('input', updateTotals);
+  document.getElementById('discountPercent').addEventListener('input', updateTotals);
 
   document.getElementById('generateBtn').addEventListener('click', () => {
     document.getElementById('generateBtn').disabled = true;
@@ -163,7 +163,7 @@ export function initNewBill() {
     const address = document.getElementById('custAddress').value.trim();
     const remarks = document.getElementById('remarks').value.trim();
     const deliveryCharges = parseFloat(document.getElementById('deliveryCharges').value) || 0;
-    const discountAmount  = parseFloat(document.getElementById('discountAmount').value)  || 0;
+    const discountPercent = parseFloat(document.getElementById('discountPercent').value) || 0;
     const dispatchFromRaw = document.getElementById('dispatchFrom').value;
     const dispatchToRaw = document.getElementById('dispatchTo').value;
     const mapLink = document.getElementById('mapLink').value.trim();
@@ -186,6 +186,7 @@ export function initNewBill() {
 
     const totalItems = selected.reduce((s, p) => s + p.qty, 0);
     const productsTotal = selected.reduce((s, p) => s + p.lineTotal, 0);
+    const discountAmount = Math.round(productsTotal * discountPercent / 100);
     const grandTotal = productsTotal + deliveryCharges - discountAmount;
     const billNo = genBillNo();
     const dateStr = new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
@@ -220,6 +221,7 @@ export function initNewBill() {
     }
     if (discountAmount > 0) {
       document.getElementById('bDiscountRow').style.display = 'flex';
+      document.getElementById('bDiscountPct').textContent = discountPercent;
       document.getElementById('bDiscountAmt').textContent = discountAmount.toLocaleString('en-IN');
     } else {
       document.getElementById('bDiscountRow').style.display = 'none';
@@ -287,7 +289,7 @@ export function initNewBill() {
   document.getElementById('newOrderBtn').addEventListener('click', () => {
     document.getElementById('billOverlay').classList.remove('show');
     document.getElementById('generateBtn').disabled = false;
-    ['custName','custPhone','custEmail','custAddress','remarks','deliveryCharges','discountAmount','dispatchFrom','dispatchTo','mapLink']
+    ['custName','custPhone','custEmail','custAddress','remarks','deliveryCharges','discountPercent','dispatchFrom','dispatchTo','mapLink']
       .forEach(id => { document.getElementById(id).value = ''; });
     document.getElementById('deliveryType').value = 'Local';
     quantities = PRODUCTS.map(() => 0);
