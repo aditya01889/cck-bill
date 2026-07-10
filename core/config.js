@@ -103,6 +103,28 @@ CATALOG.forEach(cat => {
   });
 });
 
+export const CATALOG_DEFAULTS = JSON.parse(JSON.stringify(CATALOG));
+
+export function _rebuildProducts(newCatalog) {
+  CATALOG.length = 0;
+  newCatalog.forEach(c => CATALOG.push(c));
+  PRODUCTS.length = 0;
+  CATALOG.forEach(cat => {
+    cat.items.forEach(item => {
+      if (cat.comboCategory) {
+        if (item.price !== undefined) {
+          PRODUCTS.push({ name: item.name, price: item.price, category: cat.category });
+        } else {
+          PRODUCTS.push({ name: item.name24 || `${item.name} (Pack of 24)`, price: item.price24, category: cat.category });
+          PRODUCTS.push({ name: item.name60 || `${item.name} (Pack of 60)`, price: item.price60, category: cat.category });
+        }
+      } else {
+        PRODUCTS.push({ name: item.name, price: item.price, category: cat.category });
+      }
+    });
+  });
+}
+
 /* EDIT ZONE 3 — USERS (UI metadata only)
    Passwords are stored on the backend (Users sheet). This list controls
    per-user landing tab and visible tabs — it is a UX convenience, not

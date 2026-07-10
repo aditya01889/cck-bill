@@ -182,6 +182,30 @@ function updateOrder(data) {
   }
 }
 
+function getCatalog() {
+  try {
+    var json = PropertiesService.getScriptProperties().getProperty('CATALOG');
+    return jsonResponse({ status: 'success', catalog: json ? JSON.parse(json) : null });
+  } catch(e) {
+    return jsonResponse({ status: 'error', message: e.toString() });
+  }
+}
+
+function saveCatalog(data) {
+  try {
+    var props = PropertiesService.getScriptProperties();
+    if (data.catalog === null || data.catalog === undefined) {
+      props.deleteProperty('CATALOG');
+    } else {
+      if (!Array.isArray(data.catalog)) return jsonResponse({ status: 'error', message: 'Invalid catalog format' });
+      props.setProperty('CATALOG', JSON.stringify(data.catalog));
+    }
+    return jsonResponse({ status: 'success' });
+  } catch(e) {
+    return jsonResponse({ status: 'error', message: e.toString() });
+  }
+}
+
 function updateFulfillment(billNo, fulfillmentStatus, trackingLink) {
   var valid = ['Packed', 'Booked', 'Picked Up', 'Delivered'];
   if (!billNo || valid.indexOf(fulfillmentStatus) === -1) {

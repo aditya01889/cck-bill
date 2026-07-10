@@ -2,7 +2,7 @@
 import { SHEET_WEBHOOK_URL, USERS, fetchWithTimeout } from '/core/config.js';
 import { showErrorToast } from '/core/dom.js';
 import { _authToken, currentUser, setSession, clearSession, tokenValid, setReloginCallback, doLogin } from '/core/auth.js';
-import { getOrders, prefetchOrders, prefetchCustomers, logToSheet, parseOrderMonth, invalidateOrders } from '/core/api.js';
+import { getOrders, prefetchOrders, prefetchCustomers, logToSheet, parseOrderMonth, invalidateOrders, initCatalog } from '/core/api.js';
 import { ordersState } from '/core/state.js';
 import { routeToTab, navigateTo, registerTabHandler } from '/core/router.js';
 import { initNewBill, renderProducts, updateTotals, resetQuantities } from '/features/newbill.js';
@@ -89,7 +89,13 @@ registerTabHandler('settings', loadSettings);
 
 document.getElementById('loginBtn').addEventListener('click', async () => {
   const result = await doLogin();
-  if (result.ok) showApp(false);
+  if (result.ok) {
+    await initCatalog();
+    resetQuantities();
+    renderProducts();
+    updateTotals();
+    showApp(false);
+  }
 });
 document.getElementById('loginPass').addEventListener('keydown', e => {
   if (e.key === 'Enter') document.getElementById('loginBtn').click();
@@ -119,11 +125,15 @@ initReports();
 initIngredients();
 
 /* ---- Session restore on page load ---- */
-(function checkLogin() {
+(async function checkLogin() {
   const savedUser = sessionStorage.getItem('cck_user');
   const savedToken = sessionStorage.getItem('cck_token');
   if (savedUser && savedToken && tokenValid(savedToken) && USERS.find(u => u.name === savedUser)) {
     setSession(savedUser, savedToken);
+    await initCatalog();
+    resetQuantities();
+    renderProducts();
+    updateTotals();
     showApp(true);
   } else {
     clearSession();
