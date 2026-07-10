@@ -153,9 +153,22 @@ let lastBillFilename = 'CozyCatKitchen-Bill.png';
 let lastBillNo = '';
 let lastShareToken = '';
 
+function todayISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
 export function initNewBill() {
   document.getElementById('deliveryCharges').addEventListener('input', updateTotals);
   document.getElementById('discountPercent').addEventListener('input', updateTotals);
+
+  const fromInput = document.getElementById('dispatchFrom');
+  const toInput   = document.getElementById('dispatchTo');
+  fromInput.value = todayISO();
+  fromInput.addEventListener('change', () => {
+    toInput.min = fromInput.value;
+    if (toInput.value && toInput.value < fromInput.value) toInput.value = fromInput.value;
+  });
 
   document.getElementById('generateBtn').addEventListener('click', () => {
     document.getElementById('generateBtn').disabled = true;
@@ -291,8 +304,9 @@ export function initNewBill() {
   document.getElementById('newOrderBtn').addEventListener('click', () => {
     document.getElementById('billOverlay').classList.remove('show');
     document.getElementById('generateBtn').disabled = false;
-    ['custName','custPhone','custEmail','custAddress','remarks','deliveryCharges','discountPercent','dispatchFrom','dispatchTo','mapLink']
+    ['custName','custPhone','custEmail','custAddress','remarks','deliveryCharges','discountPercent','dispatchTo','mapLink']
       .forEach(id => { document.getElementById(id).value = ''; });
+    document.getElementById('dispatchFrom').value = todayISO();
     document.getElementById('deliveryType').value = 'Local';
     quantities = PRODUCTS.map(() => 0);
     renderProducts();
