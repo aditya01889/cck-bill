@@ -76,7 +76,7 @@ export function updateTotals() {
     productsTotal += quantities[i] * p.price;
   });
   const deliveryCharges = parseFloat(document.getElementById('deliveryCharges').value) || 0;
-  const discountPercent = parseFloat(document.getElementById('discountPercent').value) || 0;
+  const discountPercent = Math.min(100, Math.max(0, parseFloat(document.getElementById('discountPercent').value) || 0));
   const discountAmount  = Math.round(productsTotal * discountPercent / 100);
   const rupeeSpan = document.getElementById('discountRupees');
   rupeeSpan.textContent = discountAmount > 0 ? `−₹${discountAmount.toLocaleString('en-IN')}` : '';
@@ -165,7 +165,7 @@ export function initNewBill() {
     const address = document.getElementById('custAddress').value.trim();
     const remarks = document.getElementById('remarks').value.trim();
     const deliveryCharges = parseFloat(document.getElementById('deliveryCharges').value) || 0;
-    const discountPercent = parseFloat(document.getElementById('discountPercent').value) || 0;
+    const discountPercent = Math.min(100, Math.max(0, parseFloat(document.getElementById('discountPercent').value) || 0));
     const dispatchFromRaw = document.getElementById('dispatchFrom').value;
     const dispatchToRaw = document.getElementById('dispatchTo').value;
     const mapLink = document.getElementById('mapLink').value.trim();
