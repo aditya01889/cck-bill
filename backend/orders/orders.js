@@ -6,7 +6,7 @@ function getOrders(search, limit) {
     var lastRow = sheet.getLastRow();
     if (lastRow <= 1) return jsonResponse({ status: 'success', orders: [] });
 
-    var cm = buildColMap_(sheet, ORDER_COLS);
+    var cm = buildColMap_(sheet, ORDER_COLS, ORDER_OPTIONAL_COLS);
     var data = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
     var s = search.toLowerCase();
     var filtered = s ? data.filter(function(r) {
@@ -35,7 +35,7 @@ function updateStatus(billNo, status) {
     var lastRow = sheet.getLastRow();
     if (lastRow <= 1) return jsonResponse({ status: 'error', message: 'Bill not found' });
 
-    var cm = buildColMap_(sheet, ORDER_COLS);
+    var cm = buildColMap_(sheet, ORDER_COLS, ORDER_OPTIONAL_COLS);
     var billNos = sheet.getRange(2, cm.billNo + 1, lastRow - 1, 1).getValues();
     var rowIndex = -1;
     for (var i = 0; i < billNos.length; i++) {
@@ -77,7 +77,7 @@ function uploadPaymentProof(data) {
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     var lastRow = sheet.getLastRow();
     if (lastRow > 1) {
-      var cm = buildColMap_(sheet, ORDER_COLS);
+      var cm = buildColMap_(sheet, ORDER_COLS, ORDER_OPTIONAL_COLS);
       var billNos = sheet.getRange(2, cm.billNo + 1, lastRow - 1, 1).getValues();
       for (var i = 0; i < billNos.length; i++) {
         if (String(billNos[i][0]) === String(billNo)) {
@@ -103,7 +103,7 @@ function getOrderByBill(billNo, token) {
     var lastRow = sheet.getLastRow();
     if (lastRow <= 1) return jsonResponse({ status: 'error', message: 'Order not found' });
 
-    var cm = buildColMap_(sheet, ORDER_COLS);
+    var cm = buildColMap_(sheet, ORDER_COLS, ORDER_OPTIONAL_COLS);
     var data = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
     for (var i = 0; i < data.length; i++) {
       var r = data[i];
@@ -147,7 +147,7 @@ function updateFulfillment(billNo, fulfillmentStatus, trackingLink) {
     var lastRow = sheet.getLastRow();
     if (lastRow <= 1) return jsonResponse({ status: 'error', message: 'Bill not found' });
 
-    var cm = buildColMap_(sheet, ORDER_COLS);
+    var cm = buildColMap_(sheet, ORDER_COLS, ORDER_OPTIONAL_COLS);
     var billNos = sheet.getRange(2, cm.billNo + 1, lastRow - 1, 1).getValues();
     var rowIndex = -1;
     for (var i = 0; i < billNos.length; i++) {

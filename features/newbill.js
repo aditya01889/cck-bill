@@ -70,15 +70,18 @@ export function renderProducts() {
 }
 
 export function updateTotals() {
-  let items = 0, amount = 0;
+  let items = 0, productsTotal = 0;
   PRODUCTS.forEach((p, i) => {
     items += quantities[i];
-    amount += quantities[i] * p.price;
+    productsTotal += quantities[i] * p.price;
   });
   const deliveryCharges = parseFloat(document.getElementById('deliveryCharges').value) || 0;
-  amount += deliveryCharges;
+  const discountPercent = Math.min(100, Math.max(0, parseFloat(document.getElementById('discountPercent').value) || 0));
+  const discountAmount  = Math.round(productsTotal * discountPercent / 100);
+  const rupeeSpan = document.getElementById('discountRupees');
+  rupeeSpan.textContent = discountAmount > 0 ? `−₹${discountAmount.toLocaleString('en-IN')}` : '';
   document.getElementById('totalItems').textContent = items;
-  document.getElementById('totalAmount').textContent = amount.toLocaleString('en-IN');
+  document.getElementById('totalAmount').textContent = (productsTotal + deliveryCharges - discountAmount).toLocaleString('en-IN');
 }
 
 /* ---- Utilities ---- */
@@ -150,7 +153,55 @@ let lastBillFilename = 'CozyCatKitchen-Bill.png';
 let lastBillNo = '';
 let lastShareToken = '';
 
+function todayISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
 export function initNewBill() {
+  document.getElementById('deliveryCharges').addEventListener('input', updateTotals);
+  document.getElementById('discountPercent').addEventListener('input', updateTotals);
+
+  function setFieldError(inputId, errorId, msg) {
+    const input = document.getElementById(inputId);
+    const err   = document.getElementById(errorId);
+    if (msg) { err.textContent = msg; input.classList.add('invalid'); }
+    else      { err.textContent = '';  input.classList.remove('invalid'); }
+  }
+
+  const nameInput  = document.getElementById('custName');
+  const phoneInput = document.getElementById('custPhone');
+  const emailInput = document.getElementById('custEmail');
+
+  nameInput.addEventListener('blur', () => {
+    setFieldError('custName', 'nameError', nameInput.value.trim() ? '' : 'Name is required.');
+  });
+  nameInput.addEventListener('input', () => setFieldError('custName', 'nameError', ''));
+
+  phoneInput.addEventListener('blur', () => {
+    const v = phoneInput.value.trim().replace(/[\s\-]/g, '');
+    setFieldError('custPhone', 'phoneError', v && !/^\d{10}$/.test(v) ? 'Enter a valid 10-digit number.' : '');
+  });
+  phoneInput.addEventListener('input', () => setFieldError('custPhone', 'phoneError', ''));
+
+  emailInput.addEventListener('blur', () => {
+    const v = emailInput.value.trim();
+    setFieldError('custEmail', 'emailError', v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? 'Enter a valid email address.' : '');
+  });
+  emailInput.addEventListener('input', () => setFieldError('custEmail', 'emailError', ''));
+
+  const fromInput = document.getElementById('dispatchFrom');
+  const toInput   = document.getElementById('dispatchTo');
+  fromInput.value = todayISO();
+  toInput.min = fromInput.value;
+  fromInput.addEventListener('change', () => {
+    toInput.min = fromInput.value;
+    if (toInput.value && toInput.value < fromInput.value) toInput.value = fromInput.value;
+  });
+  toInput.addEventListener('change', () => {
+    if (toInput.value && fromInput.value && toInput.value < fromInput.value) toInput.value = fromInput.value;
+  });
+
   document.getElementById('generateBtn').addEventListener('click', () => {
     document.getElementById('generateBtn').disabled = true;
     const name = document.getElementById('custName').value.trim();
@@ -159,6 +210,7 @@ export function initNewBill() {
     const address = document.getElementById('custAddress').value.trim();
     const remarks = document.getElementById('remarks').value.trim();
     const deliveryCharges = parseFloat(document.getElementById('deliveryCharges').value) || 0;
+    const discountPercent = Math.min(100, Math.max(0, parseFloat(document.getElementById('discountPercent').value) || 0));
     const dispatchFromRaw = document.getElementById('dispatchFrom').value;
     const dispatchToRaw = document.getElementById('dispatchTo').value;
     const mapLink = document.getElementById('mapLink').value.trim();
@@ -181,7 +233,8 @@ export function initNewBill() {
 
     const totalItems = selected.reduce((s, p) => s + p.qty, 0);
     const productsTotal = selected.reduce((s, p) => s + p.lineTotal, 0);
-    const grandTotal = productsTotal + deliveryCharges;
+    const discountAmount = Math.round(productsTotal * discountPercent / 100);
+    const grandTotal = productsTotal + deliveryCharges - discountAmount;
     const billNo = genBillNo();
     const dateStr = new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
     const dispatchDateDisplay = formatDispatchRange(dispatchFromRaw, dispatchToRaw);
@@ -213,6 +266,13 @@ export function initNewBill() {
     } else {
       document.getElementById('bDeliveryRow').style.display = 'none';
     }
+    if (discountAmount > 0) {
+      document.getElementById('bDiscountRow').style.display = 'flex';
+      document.getElementById('bDiscountPct').textContent = discountPercent;
+      document.getElementById('bDiscountAmt').textContent = discountAmount.toLocaleString('en-IN');
+    } else {
+      document.getElementById('bDiscountRow').style.display = 'none';
+    }
     document.getElementById('bGrandTotal').textContent = grandTotal.toLocaleString('en-IN');
 
     if (dispatchDateDisplay) {
@@ -242,7 +302,7 @@ export function initNewBill() {
     logToSheet({
       billNo, dateStr, name, phone, email, address,
       items: selected, totalItems, totalAmount: grandTotal,
-      deliveryCharges, dispatchDateDisplay, remarks,
+      deliveryCharges, discount: discountAmount, dispatchDateDisplay, remarks,
       generatedBy: currentUser || '',
       mapLink, deliveryType,
       shareToken: lastShareToken
@@ -276,8 +336,11 @@ export function initNewBill() {
   document.getElementById('newOrderBtn').addEventListener('click', () => {
     document.getElementById('billOverlay').classList.remove('show');
     document.getElementById('generateBtn').disabled = false;
-    ['custName','custPhone','custEmail','custAddress','remarks','deliveryCharges','dispatchFrom','dispatchTo','mapLink']
+    ['custName','custPhone','custEmail','custAddress','remarks','deliveryCharges','discountPercent','dispatchTo','mapLink']
       .forEach(id => { document.getElementById(id).value = ''; });
+    document.getElementById('dispatchFrom').value = todayISO();
+    [['custName','nameError'],['custPhone','phoneError'],['custEmail','emailError']]
+      .forEach(([i,e]) => setFieldError(i, e, ''));
     document.getElementById('deliveryType').value = 'Local';
     quantities = PRODUCTS.map(() => 0);
     renderProducts();

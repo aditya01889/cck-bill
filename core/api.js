@@ -85,6 +85,7 @@ export function logToSheet(data) {
     totalItems: data.totalItems,
     totalAmount: data.totalAmount,
     deliveryCharges: data.deliveryCharges || 0,
+    discount: data.discount || 0,
     dispatchDate: data.dispatchDateDisplay || '',
     paymentStatus: 'Pending',
     itemsSummary: data.items.map(i => `${i.category}: ${i.name} x${i.qty} (₹${i.lineTotal})`).join('; '),

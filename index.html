@@ -114,15 +114,18 @@
     <label for="custName">Name</label>
     <input type="text" id="custName" placeholder="Customer name" autocomplete="off">
     <div id="custSuggestions" class="autocomplete-list" style="display:none;"></div>
+    <div class="field-error" id="nameError"></div>
   </div>
   <div class="row2">
     <div class="field">
       <label for="custPhone">Phone</label>
       <input type="tel" id="custPhone" placeholder="Phone number">
+      <div class="field-error" id="phoneError"></div>
     </div>
     <div class="field">
       <label for="custEmail">Email</label>
       <input type="email" id="custEmail" placeholder="Email">
+      <div class="field-error" id="emailError"></div>
     </div>
   </div>
   <div class="field">
@@ -133,9 +136,15 @@
   <div class="section-label">Products</div>
   <div id="productList"></div>
 
-  <div class="field" style="margin-top:18px;">
-    <label for="deliveryCharges">Delivery Charges (₹)</label>
-    <input type="number" id="deliveryCharges" inputmode="numeric" min="0" step="1" placeholder="0">
+  <div class="row2" style="margin-top:18px;">
+    <div class="field">
+      <label for="deliveryCharges">Delivery Charges (₹)</label>
+      <input type="number" id="deliveryCharges" inputmode="numeric" min="0" step="1" placeholder="0">
+    </div>
+    <div class="field">
+      <label for="discountPercent">Discount (%) <span id="discountRupees" style="font-weight:700;color:var(--rust-deep);"></span></label>
+      <input type="number" id="discountPercent" inputmode="decimal" min="0" max="100" step="0.1" placeholder="0">
+    </div>
   </div>
 
   <div class="totals">
@@ -339,6 +348,10 @@
       <div class="bill-delivery" id="bDeliveryRow" style="display:none;">
         <span>Delivery Charges</span>
         <span>₹<span id="bDeliveryAmt">0</span></span>
+      </div>
+      <div class="bill-discount" id="bDiscountRow" style="display:none;">
+        <span>Discount (<span id="bDiscountPct">0</span>%)</span>
+        <span>−₹<span id="bDiscountAmt">0</span></span>
       </div>
 
       <div class="bill-grand">
