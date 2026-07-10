@@ -12,9 +12,11 @@ export const IS_DEV    = _host === 'localhost' || _host.includes('-dev.');
 export const ENV_LABEL = IS_PROD ? 'Production' : IS_DEV ? 'Development' : 'Preview';
 
 /* EDIT ZONE 1 — GOOGLE APPS SCRIPT WEB APP URLS
-   To add a staging backend: deploy a second Apps Script version and set the
-   staging URL below, then swap based on IS_PROD. */
-export const SHEET_WEBHOOK_URL       = "https://script.google.com/macros/s/AKfycbxAiGRuOVaN61HJe8szgTGQlA1iun-mjO-3MmhTYW1Jwnyzfc9ZKAmCR9f281-BrZV2/exec";
+   Production URLs are used on cck-bill.vercel.app; staging URLs everywhere else
+   (dev Vercel deployment, localhost, PR previews). */
+export const SHEET_WEBHOOK_URL = IS_PROD
+  ? "https://script.google.com/macros/s/AKfycbxAiGRuOVaN61HJe8szgTGQlA1iun-mjO-3MmhTYW1Jwnyzfc9ZKAmCR9f281-BrZV2/exec"
+  : "https://script.google.com/macros/s/AKfycbxsEeifaLyFs7_y48HlNdsITXjeVOcvnp0kKicxWRV4J5lEYg0gCPg7bJeaisAg6U9T/exec";
 export const INGREDIENTS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwQu7pHeXayRv87M7-zUinXNTiw8YQaXXAMQ_E8tY-oLuhGs5tUwqC7dPBBxogCJLKObA/exec";
 
 /* EDIT ZONE 1B — UPI PAYMENT */
