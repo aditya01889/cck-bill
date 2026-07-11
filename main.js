@@ -57,6 +57,9 @@ function showApp(isRestore) {
   document.querySelectorAll('.tab-bar .tab').forEach(btn => {
     btn.style.display = (userObj && userObj.access.includes(btn.dataset.tab)) ? '' : 'none';
   });
+  document.querySelectorAll('.bottom-nav-btn').forEach(btn => {
+    btn.style.display = (userObj && userObj.access.includes(btn.dataset.tab)) ? '' : 'none';
+  });
   const landing = userObj ? userObj.landing : 'dashboard';
   if (isRestore) {
     const tab = routeToTab(location.pathname);
@@ -113,8 +116,8 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
 // Copy header logo into login card (avoids duplicating the base64 src).
 document.getElementById('loginLogo').src = document.querySelector('.logo-img').src;
 
-// Tab bar navigation
-document.querySelectorAll('.tab-bar .tab').forEach(btn => {
+// Tab bar navigation (top bar + bottom nav)
+document.querySelectorAll('.tab-bar .tab, .bottom-nav-btn').forEach(btn => {
   btn.addEventListener('click', () => navigateTo(btn.dataset.tab));
 });
 
