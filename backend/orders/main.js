@@ -28,6 +28,29 @@ function doPost(e) {
       return saveCatalog(data);
     }
 
+    if (data.action === 'changePassword') {
+      var cpTok = verifyToken_(data.auth);
+      return changePassword_(cpTok.u, data.currentPassword || '', data.newPassword || '');
+    }
+
+    if (data.action === 'addUser') {
+      var auTok = verifyToken_(data.auth);
+      if (auTok.r !== 'admin') return jsonResponse({ status: 'error', message: 'Unauthorized' });
+      return addUserApi_(data.username || '', data.password || '', data.role || 'staff');
+    }
+
+    if (data.action === 'updateUser') {
+      var uuTok = verifyToken_(data.auth);
+      if (uuTok.r !== 'admin') return jsonResponse({ status: 'error', message: 'Unauthorized' });
+      return updateUserApi_(data.username || '', data.role, data.active);
+    }
+
+    if (data.action === 'resetPassword') {
+      var rpTok = verifyToken_(data.auth);
+      if (rpTok.r !== 'admin') return jsonResponse({ status: 'error', message: 'Unauthorized' });
+      return resetPasswordApi_(data.username || '', data.newPassword || '');
+    }
+
     // New order creation — lock covers both the appendRow and the customer upsert
     // so concurrent submissions don't interleave rows in either sheet.
     var lock = LockService.getScriptLock();
@@ -83,7 +106,7 @@ function doGet(e) {
     return logClientError_(e.parameter);
   }
 
-  var PROTECTED = { orders: 1, customers: 1, updateStatus: 1, updateFulfillment: 1, getCatalog: 1 };
+  var PROTECTED = { orders: 1, customers: 1, updateStatus: 1, updateFulfillment: 1, getCatalog: 1, getUsers: 1 };
   if (PROTECTED[action] && !verifyToken_(e.parameter.auth)) {
     return jsonResponse({ status: 'error', message: 'Unauthorized' });
   }
@@ -106,6 +129,11 @@ function doGet(e) {
   }
   if (action === 'getCatalog') {
     return getCatalog();
+  }
+  if (action === 'getUsers') {
+    var guTok = verifyToken_(e.parameter.auth);
+    if (!guTok || guTok.r !== 'admin') return jsonResponse({ status: 'error', message: 'Unauthorized' });
+    return jsonResponse({ status: 'success', users: getUsersList_() });
   }
 
   return ContentService.createTextOutput('CozyCatKitchen order logger is running.');
