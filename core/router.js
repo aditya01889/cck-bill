@@ -5,13 +5,19 @@ export const ROUTE_TO_TAB = {
   dashboard: 'dashboard',
   ebill: 'newbill',
   orders: 'orders',
-  ingredients: 'ingredients'
+  customers: 'customers',
+  reports: 'reports',
+  ingredients: 'ingredients',
+  settings: 'settings'
 };
 export const TAB_TO_ROUTE = {
   dashboard: 'dashboard',
   newbill: 'ebill',
   orders: 'orders',
-  ingredients: 'ingredients'
+  customers: 'customers',
+  reports: 'reports',
+  ingredients: 'ingredients',
+  settings: 'settings'
 };
 
 // Tab handlers registered by features (or main.js) via registerTabHandler().

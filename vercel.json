@@ -4,7 +4,10 @@
     { "source": "/dashboard",   "destination": "/" },
     { "source": "/ebill",       "destination": "/" },
     { "source": "/orders",      "destination": "/" },
-    { "source": "/ingredients", "destination": "/" }
+    { "source": "/customers",   "destination": "/" },
+    { "source": "/reports",     "destination": "/" },
+    { "source": "/ingredients", "destination": "/" },
+    { "source": "/settings",    "destination": "/" }
   ],
   "headers": [
     {
