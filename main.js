@@ -106,6 +106,7 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
   resetQuantities();
   renderProducts();
   updateTotals();
+  history.replaceState(null, '', '/');
   showLogin();
 });
 
