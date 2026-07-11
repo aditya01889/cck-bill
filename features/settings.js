@@ -1,10 +1,11 @@
-/* Settings tab — environment info, backend endpoints, and product catalog editor.
+/* Settings tab — environment info, backend endpoints, product catalog editor, and user management.
    Admin-only: visible only to users whose access list includes 'settings'. */
 import { IS_PROD, ENV_LABEL, SHEET_WEBHOOK_URL, INGREDIENTS_WEBHOOK_URL,
          CATALOG, CATALOG_DEFAULTS, _rebuildProducts } from '/core/config.js';
 import { escapeHtml } from '/core/dom.js';
-import { saveCatalogToServer } from '/core/api.js';
+import { saveCatalogToServer, getUsers, changePassword, addUser, updateUser, resetPassword } from '/core/api.js';
 import { resetQuantities, renderProducts, updateTotals } from '/features/newbill.js';
+import { currentRole } from '/core/auth.js';
 
 function truncate(url, n) {
   return url.length > n ? url.slice(0, n) + '…' : url;
@@ -246,6 +247,134 @@ async function _resetCatalogToDefaults() {
   }
 }
 
+/* ---------- User management ---------- */
+
+function _setMsg(id, text, isError) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  el.className = 'settings-msg ' + (isError ? 'settings-msg-err' : 'settings-msg-ok');
+}
+
+async function _changePassword() {
+  const btn  = document.getElementById('changePwdBtn');
+  const cur  = document.getElementById('curPwdInput').value;
+  const nw   = document.getElementById('newPwdInput').value;
+  const conf = document.getElementById('confPwdInput').value;
+  if (!cur || !nw || !conf) { _setMsg('changePwdMsg', 'All fields are required.', true); return; }
+  if (nw.length < 6)        { _setMsg('changePwdMsg', 'New password must be at least 6 characters.', true); return; }
+  if (nw !== conf)          { _setMsg('changePwdMsg', 'New passwords do not match.', true); return; }
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    await changePassword(cur, nw);
+    document.getElementById('curPwdInput').value  = '';
+    document.getElementById('newPwdInput').value  = '';
+    document.getElementById('confPwdInput').value = '';
+    _setMsg('changePwdMsg', 'Password changed successfully.', false);
+  } catch (e) {
+    _setMsg('changePwdMsg', e.message || 'Failed to change password.', true);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Change Password';
+  }
+}
+
+async function _loadUsersList() {
+  const el = document.getElementById('userMgmtList');
+  if (!el) return;
+  el.innerHTML = '<span class="settings-loading">Loading users…</span>';
+  try {
+    const users = await getUsers();
+    if (!users.length) { el.innerHTML = '<span class="settings-loading">No users found.</span>'; return; }
+    el.innerHTML = users.map(u => `
+      <div class="user-row" data-username="${escapeHtml(u.username)}">
+        <span class="user-row-name">${escapeHtml(u.username)}</span>
+        <select class="user-role-sel cat-editor-input" data-username="${escapeHtml(u.username)}">
+          <option value="staff"${u.role === 'staff' ? ' selected' : ''}>staff</option>
+          <option value="admin"${u.role === 'admin' ? ' selected' : ''}>admin</option>
+        </select>
+        <button class="btn btn-secondary user-active-btn" data-username="${escapeHtml(u.username)}" data-active="${u.active}">
+          ${u.active ? 'Disable' : 'Enable'}
+        </button>
+        <button class="btn btn-secondary user-resetpwd-btn" data-username="${escapeHtml(u.username)}">Reset Pwd</button>
+      </div>
+    `).join('');
+
+    el.querySelectorAll('.user-role-sel').forEach(sel => {
+      sel.addEventListener('change', async () => {
+        const uname = sel.dataset.username;
+        const prev  = sel.querySelector('option:not([value="' + sel.value + '"])').value;
+        sel.disabled = true;
+        try {
+          await updateUser(uname, { role: sel.value });
+        } catch (e) {
+          sel.value = prev;
+          _setMsg('userMgmtMsg', e.message || 'Failed to update role.', true);
+        } finally {
+          sel.disabled = false;
+        }
+      });
+    });
+
+    el.querySelectorAll('.user-active-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const uname  = btn.dataset.username;
+        const active = btn.dataset.active === 'true';
+        btn.disabled = true;
+        try {
+          await updateUser(uname, { active: !active });
+          btn.dataset.active = String(!active);
+          btn.textContent = !active ? 'Disable' : 'Enable';
+        } catch (e) {
+          _setMsg('userMgmtMsg', e.message || 'Failed to update user.', true);
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    });
+
+    el.querySelectorAll('.user-resetpwd-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const uname = btn.dataset.username;
+        const newPwd = prompt('Set new password for "' + uname + '" (min 6 chars):');
+        if (!newPwd) return;
+        if (newPwd.length < 6) { _setMsg('userMgmtMsg', 'Password must be at least 6 characters.', true); return; }
+        btn.disabled = true;
+        try {
+          await resetPassword(uname, newPwd);
+          _setMsg('userMgmtMsg', 'Password reset for ' + uname + '.', false);
+        } catch (e) {
+          _setMsg('userMgmtMsg', e.message || 'Failed to reset password.', true);
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    });
+  } catch (e) {
+    el.innerHTML = '<span class="settings-loading">Failed to load users: ' + escapeHtml(e.message) + '</span>';
+  }
+}
+
+async function _addUser() {
+  const btn   = document.getElementById('addUserBtn');
+  const uname = document.getElementById('addUserName').value.trim();
+  const pwd   = document.getElementById('addUserPwd').value;
+  const role  = document.getElementById('addUserRole').value;
+  if (!uname || !pwd) { _setMsg('userMgmtMsg', 'Username and password are required.', true); return; }
+  if (pwd.length < 6) { _setMsg('userMgmtMsg', 'Password must be at least 6 characters.', true); return; }
+  btn.disabled = true; btn.textContent = 'Adding…';
+  try {
+    await addUser(uname, pwd, role);
+    document.getElementById('addUserName').value = '';
+    document.getElementById('addUserPwd').value  = '';
+    _setMsg('userMgmtMsg', 'User "' + uname + '" added.', false);
+    _loadUsersList();
+  } catch (e) {
+    _setMsg('userMgmtMsg', e.message || 'Failed to add user.', true);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Add User';
+  }
+}
+
 export function loadSettings() {
   const el = document.getElementById('tab-settings');
   if (!el) return;
@@ -253,6 +382,7 @@ export function loadSettings() {
   if (!_editCatalog) _editCatalog = _cloneForEdit(CATALOG);
 
   const envClass = IS_PROD ? 'env-prod' : 'env-dev';
+  const isAdmin  = currentRole === 'admin';
 
   el.innerHTML = `
     <div class="wrap">
@@ -281,6 +411,45 @@ export function loadSettings() {
       </div>
 
       <div class="settings-card">
+        <div class="settings-card-title">Change Password</div>
+        <div class="settings-field-row">
+          <label class="settings-field-label">Current password</label>
+          <input type="password" id="curPwdInput" class="cat-editor-input settings-field-input" autocomplete="current-password">
+        </div>
+        <div class="settings-field-row">
+          <label class="settings-field-label">New password</label>
+          <input type="password" id="newPwdInput" class="cat-editor-input settings-field-input" autocomplete="new-password">
+        </div>
+        <div class="settings-field-row">
+          <label class="settings-field-label">Confirm new</label>
+          <input type="password" id="confPwdInput" class="cat-editor-input settings-field-input" autocomplete="new-password">
+        </div>
+        <div style="margin-top:12px">
+          <button class="btn btn-primary" id="changePwdBtn">Change Password</button>
+        </div>
+        <div id="changePwdMsg" class="settings-msg" style="margin-top:8px"></div>
+      </div>
+
+      ${isAdmin ? `
+      <div class="settings-card">
+        <div class="settings-card-title">User Management</div>
+        <div id="userMgmtList"></div>
+        <hr class="settings-section-divider">
+        <div class="settings-card-subtitle">Add User</div>
+        <div class="settings-add-user-row">
+          <input type="text" id="addUserName" class="cat-editor-input" placeholder="Username" autocomplete="off">
+          <input type="password" id="addUserPwd" class="cat-editor-input" placeholder="Password (min 6 chars)" autocomplete="new-password">
+          <select id="addUserRole" class="cat-editor-input">
+            <option value="staff">staff</option>
+            <option value="admin">admin</option>
+          </select>
+          <button class="btn btn-secondary" id="addUserBtn">Add User</button>
+        </div>
+        <div id="userMgmtMsg" class="settings-msg" style="margin-top:8px"></div>
+      </div>
+      ` : ''}
+
+      <div class="settings-card">
         <div class="settings-card-title">Product Catalog</div>
         <div class="catalog-btns">
           <button class="btn btn-primary" id="saveCatalogBtn">Save Catalog</button>
@@ -294,4 +463,10 @@ export function loadSettings() {
   _renderCatalogEditor();
   document.getElementById('saveCatalogBtn').addEventListener('click', _saveCatalog);
   document.getElementById('resetCatalogBtn').addEventListener('click', _resetCatalogToDefaults);
+  document.getElementById('changePwdBtn').addEventListener('click', _changePassword);
+
+  if (isAdmin) {
+    document.getElementById('addUserBtn').addEventListener('click', _addUser);
+    _loadUsersList();
+  }
 }
