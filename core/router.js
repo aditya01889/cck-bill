@@ -34,9 +34,12 @@ export function routeToTab(pathname) {
 
 export function showTab(tab) {
   document.querySelectorAll('.tab-bar .tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.bottom-nav-btn').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   const btn = document.querySelector(`.tab-bar .tab[data-tab="${tab}"]`);
   if (btn) btn.classList.add('active');
+  const bottomBtn = document.querySelector(`.bottom-nav-btn[data-tab="${tab}"]`);
+  if (bottomBtn) bottomBtn.classList.add('active');
   const panel = document.getElementById('tab-' + tab);
   if (panel) panel.classList.add('active');
   if (_tabHandlers[tab]) _tabHandlers[tab]();
