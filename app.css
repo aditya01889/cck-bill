@@ -961,3 +961,31 @@
     cursor:pointer;padding:4px 0;font-weight:600;
   }
   .btn-link:hover{text-decoration:underline;}
+
+  /* ---- Settings: password + user management ---- */
+  .settings-field-row{
+    display:flex;align-items:center;gap:10px;padding:6px 0;
+  }
+  .settings-field-label{
+    font-size:12.5px;font-weight:600;color:var(--muted);width:120px;flex-shrink:0;
+  }
+  .settings-field-input{width:100%;max-width:260px;}
+  .settings-msg{font-size:12.5px;min-height:18px;}
+  .settings-msg-ok{color:#2E7D32;}
+  .settings-msg-err{color:#C62828;}
+  .settings-loading{font-size:13px;color:var(--muted);}
+  .settings-section-divider{border:none;border-top:1px solid var(--line);margin:14px 0;}
+  .settings-card-subtitle{
+    font-size:12px;font-weight:700;color:var(--muted);
+    letter-spacing:0.08em;text-transform:uppercase;margin-bottom:10px;
+  }
+  .settings-add-user-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+  .settings-add-user-row .cat-editor-input{flex:1;min-width:100px;}
+  .user-row{
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    padding:8px 0;border-bottom:1px solid var(--line);
+  }
+  .user-row:last-child{border-bottom:none;}
+  .user-row-name{font-size:13.5px;font-weight:600;flex:1;min-width:80px;}
+  .user-role-sel{width:80px;flex-shrink:0;}
+  .user-row .btn{padding:5px 10px;font-size:12px;flex-shrink:0;}

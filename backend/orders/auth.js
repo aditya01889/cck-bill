@@ -133,3 +133,74 @@ function setupUser(username, password, role) {
   sh.appendRow(row);
   Logger.log('Created user ' + username);
 }
+
+// --- User management API helpers (called from main.js doPost/doGet) ---
+
+function getUsersList_() {
+  var sh = usersSheet_();
+  var last = sh.getLastRow();
+  if (last <= 1) return [];
+  var rows = sh.getRange(2, 1, last - 1, 5).getValues();
+  return rows.map(function(r) {
+    return {
+      username: String(r[0]),
+      role: String(r[3]),
+      active: !(r[4] === false || String(r[4]).toLowerCase() === 'false')
+    };
+  }).filter(function(u) { return u.username; });
+}
+
+function changePassword_(username, currentPassword, newPassword) {
+  if (!newPassword || String(newPassword).length < 6) {
+    return jsonResponse({ status: 'error', message: 'New password must be at least 6 characters.' });
+  }
+  var u = findUser_(username);
+  if (!u) return jsonResponse({ status: 'error', message: 'User not found.' });
+  if (!constantEquals_(hashPassword_(currentPassword, u.salt), String(u.hash))) {
+    return jsonResponse({ status: 'error', message: 'Current password is incorrect.' });
+  }
+  setupUser(u.username, newPassword, u.role);
+  return jsonResponse({ status: 'success' });
+}
+
+function addUserApi_(username, password, role) {
+  var uname = String(username || '').trim();
+  if (!uname || !password) {
+    return jsonResponse({ status: 'error', message: 'Username and password are required.' });
+  }
+  if (String(password).length < 6) {
+    return jsonResponse({ status: 'error', message: 'Password must be at least 6 characters.' });
+  }
+  if (findUser_(uname)) {
+    return jsonResponse({ status: 'error', message: 'A user with that name already exists.' });
+  }
+  setupUser(uname, password, role || 'staff');
+  return jsonResponse({ status: 'success' });
+}
+
+function updateUserApi_(targetUsername, role, active) {
+  var sh = usersSheet_();
+  var last = sh.getLastRow();
+  if (last <= 1) return jsonResponse({ status: 'error', message: 'User not found.' });
+  var rows = sh.getRange(2, 1, last - 1, 5).getValues();
+  var uname = String(targetUsername || '').trim().toLowerCase();
+  for (var i = 0; i < rows.length; i++) {
+    if (String(rows[i][0]).trim().toLowerCase() === uname) {
+      var newRole   = role   !== undefined ? role   : rows[i][3];
+      var newActive = active !== undefined ? active : rows[i][4];
+      sh.getRange(i + 2, 4, 1, 2).setValues([[newRole, newActive]]);
+      return jsonResponse({ status: 'success' });
+    }
+  }
+  return jsonResponse({ status: 'error', message: 'User not found.' });
+}
+
+function resetPasswordApi_(targetUsername, newPassword) {
+  if (!newPassword || String(newPassword).length < 6) {
+    return jsonResponse({ status: 'error', message: 'Password must be at least 6 characters.' });
+  }
+  var u = findUser_(targetUsername);
+  if (!u) return jsonResponse({ status: 'error', message: 'User not found.' });
+  setupUser(u.username, newPassword, u.role);
+  return jsonResponse({ status: 'success' });
+}

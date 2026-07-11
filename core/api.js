@@ -94,6 +94,55 @@ export function saveCatalogToServer(catalog) {
   });
 }
 
+/* ---- User management ---- */
+
+export async function getUsers() {
+  const res = await fetchWithTimeout(authUrl(`${SHEET_WEBHOOK_URL}?action=getUsers`));
+  const data = await res.json();
+  if (data.status === 'success') return data.users || [];
+  throw new Error(data.message || 'Failed to load users');
+}
+
+export async function changePassword(currentPassword, newPassword) {
+  const res = await fetchWithTimeout(SHEET_WEBHOOK_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: 'changePassword', currentPassword, newPassword, auth: _authToken })
+  });
+  const data = await res.json();
+  if (data.status !== 'success') throw new Error(data.message || 'Failed to change password');
+}
+
+export async function addUser(username, password, role) {
+  const res = await fetchWithTimeout(SHEET_WEBHOOK_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: 'addUser', username, password, role, auth: _authToken })
+  });
+  const data = await res.json();
+  if (data.status !== 'success') throw new Error(data.message || 'Failed to add user');
+}
+
+export async function updateUser(username, updates) {
+  const res = await fetchWithTimeout(SHEET_WEBHOOK_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: 'updateUser', username, ...updates, auth: _authToken })
+  });
+  const data = await res.json();
+  if (data.status !== 'success') throw new Error(data.message || 'Failed to update user');
+}
+
+export async function resetPassword(username, newPassword) {
+  const res = await fetchWithTimeout(SHEET_WEBHOOK_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: 'resetPassword', username, newPassword, auth: _authToken })
+  });
+  const data = await res.json();
+  if (data.status !== 'success') throw new Error(data.message || 'Failed to reset password');
+}
+
 /* ---- Bill logging ---- */
 
 export function updateOrderInSheet(data) {
