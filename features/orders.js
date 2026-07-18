@@ -15,6 +15,8 @@ let _viewMode = 'list';
 let _calYear = new Date().getFullYear();
 let _calMonth = new Date().getMonth();
 let _calSelectedDay = null;
+let _scanStream = null;
+let _scanInterval = null;
 
 /* ---- DTDC AWB helper ---- */
 
@@ -24,6 +26,50 @@ function extractDtdcAwb(url) {
     const u = new URL(url);
     return u.searchParams.get('cnNo') || u.searchParams.get('awbno') || u.searchParams.get('awb') || '';
   } catch { return ''; }
+}
+
+/* ---- AWB barcode scanner ---- */
+
+function stopAwbScan() {
+  clearInterval(_scanInterval);
+  _scanInterval = null;
+  if (_scanStream) {
+    _scanStream.getTracks().forEach(t => t.stop());
+    _scanStream = null;
+  }
+  const modal = document.getElementById('awbScanModal');
+  const video = document.getElementById('awbScanVideo');
+  if (modal) modal.style.display = 'none';
+  if (video) video.srcObject = null;
+}
+
+function startAwbScan() {
+  if (!('BarcodeDetector' in window)) return;
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } })
+    .then(stream => {
+      _scanStream = stream;
+      const video = document.getElementById('awbScanVideo');
+      const modal = document.getElementById('awbScanModal');
+      const hint = document.getElementById('awbScanHint');
+      video.srcObject = stream;
+      modal.style.display = 'flex';
+      const detector = new BarcodeDetector({ formats: ['code_128', 'code_39', 'qr_code', 'data_matrix'] });
+      _scanInterval = setInterval(async () => {
+        if (!_scanStream || video.readyState < 2) return;
+        try {
+          const barcodes = await detector.detect(video);
+          if (barcodes.length) {
+            const raw = barcodes[0].rawValue;
+            stopAwbScan();
+            document.getElementById('dtdcAwbInput').value = raw;
+            if (hint) hint.textContent = 'Scanning…';
+          }
+        } catch (_) {}
+      }, 300);
+      // Auto-stop after 60 s
+      setTimeout(() => { if (_scanStream) stopAwbScan(); }, 60000);
+    })
+    .catch(err => alert('Camera access denied: ' + err.message));
 }
 
 /* ---- Helpers ---- */
@@ -353,6 +399,7 @@ function updateFulfillmentUI() {
   const status = document.getElementById('fulfillmentSelect').value;
   const showTracking = status === 'Booked' || status === 'Picked Up' || status === 'Delivered';
   document.getElementById('trackingLinkField').style.display = showTracking ? 'block' : 'none';
+  document.getElementById('awbField').style.display = showTracking ? 'block' : 'none';
   const workflow = document.getElementById('dispatchWorkflow');
   if (status !== 'Booked' || !_fulfillmentOrder) {
     workflow.innerHTML = '';
@@ -374,14 +421,8 @@ function openFulfillmentPanel(billNo) {
   sel.value = _fulfillmentOrder.fulfillmentStatus || 'Packed';
   const existingLink = _fulfillmentOrder.trackingLink || '';
   document.getElementById('trackingLinkInput').value = existingLink;
-  const existingAwb = extractDtdcAwb(existingLink);
-  const awbDisplay = document.getElementById('dtdcAwbDisplay');
-  if (existingAwb) {
-    document.getElementById('dtdcAwbValue').textContent = existingAwb;
-    awbDisplay.style.display = 'block';
-  } else {
-    awbDisplay.style.display = 'none';
-  }
+  document.getElementById('dtdcAwbInput').value =
+    _fulfillmentOrder.dtdcAwb || extractDtdcAwb(existingLink);
   updateFulfillmentUI();
   document.getElementById('fulfillmentPanel').style.display = 'block';
   document.getElementById('fulfillmentPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -725,9 +766,18 @@ export function initOrders() {
   document.getElementById('viewListBtn').addEventListener('click', () => setViewMode('list'));
   document.getElementById('viewCalendarBtn').addEventListener('click', () => setViewMode('calendar'));
 
+  if ('BarcodeDetector' in window) {
+    const scanBtn = document.getElementById('awbScanBtn');
+    scanBtn.style.display = 'flex';
+    scanBtn.addEventListener('click', startAwbScan);
+  }
+  document.getElementById('awbScanCloseBtn').addEventListener('click', stopAwbScan);
+
   document.getElementById('cancelFulfillmentBtn').addEventListener('click', () => {
+    stopAwbScan();
     document.getElementById('fulfillmentPanel').style.display = 'none';
     document.getElementById('dispatchWorkflow').innerHTML = '';
+    document.getElementById('dtdcAwbInput').value = '';
     _fulfillmentOrder = null;
   });
 
@@ -741,14 +791,10 @@ export function initOrders() {
       sel.value = 'Booked';
       updateFulfillmentUI();
     }
-    // Show extracted DTDC AWB if present in the link
+    // Auto-fill AWB input from tracking URL if field is currently empty
     const awb = extractDtdcAwb(val);
-    const awbDisplay = document.getElementById('dtdcAwbDisplay');
-    if (awb) {
-      document.getElementById('dtdcAwbValue').textContent = awb;
-      awbDisplay.style.display = 'block';
-    } else {
-      awbDisplay.style.display = 'none';
+    if (awb && !document.getElementById('dtdcAwbInput').value) {
+      document.getElementById('dtdcAwbInput').value = awb;
     }
   });
 
@@ -756,7 +802,7 @@ export function initOrders() {
     if (!_fulfillmentOrder) return;
     const status = document.getElementById('fulfillmentSelect').value;
     const trackingLink = document.getElementById('trackingLinkInput').value.trim();
-    const dtdcAwb = extractDtdcAwb(trackingLink);
+    const dtdcAwb = document.getElementById('dtdcAwbInput').value.trim() || extractDtdcAwb(trackingLink);
     const btn = document.getElementById('confirmFulfillmentBtn');
     btn.disabled = true;
     btn.textContent = 'Saving…';

@@ -1083,3 +1083,46 @@
   .cal-cell:not(.has-orders) .cal-day-num{color:var(--muted);}
   .cal-cell.today:not(.has-orders) .cal-day-num{color:#fff;}
   .cal-cell.cal-empty{cursor:default;}
+
+  /* ---- AWB scan button ---- */
+  .btn-scan-awb{
+    background:var(--line);border:none;border-radius:8px;
+    padding:8px;cursor:pointer;color:var(--muted);
+    display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;
+  }
+  .btn-scan-awb:hover{background:var(--rust);color:#fff;}
+
+  /* ---- AWB barcode scanner modal ---- */
+  .awb-scan-modal{
+    position:fixed;inset:0;
+    background:rgba(0,0,0,0.88);
+    z-index:9999;
+    display:flex;align-items:center;justify-content:center;
+    padding:16px;
+  }
+  .awb-scan-inner{
+    width:100%;max-width:400px;
+    background:#111;
+    border-radius:14px;overflow:hidden;
+  }
+  .awb-scan-header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 16px 10px;
+    color:#fff;font-size:14px;font-weight:700;
+  }
+  .awb-scan-close{
+    background:rgba(255,255,255,0.12);border:none;border-radius:6px;
+    color:#fff;font-size:16px;cursor:pointer;
+    padding:4px 9px;line-height:1;
+  }
+  .awb-scan-close:hover{background:rgba(255,255,255,0.22);}
+  .awb-scan-video{
+    width:100%;aspect-ratio:4/3;object-fit:cover;
+    background:#000;display:block;
+  }
+  .awb-scan-hint{
+    text-align:center;font-size:12px;
+    color:rgba(255,255,255,0.45);
+    padding:10px 16px 14px;
+  }
