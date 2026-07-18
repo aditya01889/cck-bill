@@ -281,7 +281,8 @@ function fetchDtdcStatus_(awb) {
 
 // Time-driven trigger: auto-advance fulfillment for DTDC orders.
 // Set up via setupDtdcTrigger() in setup.js; runs hourly.
-function pollDtdcTracking_() {
+// NOTE: must NOT end with _ so it appears in the Apps Script trigger UI.
+function pollDtdcTracking() {
   try {
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     var lastRow = sheet.getLastRow();

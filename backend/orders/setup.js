@@ -48,11 +48,11 @@ function setupDtdcAwbColumn() {
 function setupDtdcTrigger() {
   var triggers = ScriptApp.getProjectTriggers();
   for (var i = 0; i < triggers.length; i++) {
-    if (triggers[i].getHandlerFunction() === 'pollDtdcTracking_') {
+    if (triggers[i].getHandlerFunction() === 'pollDtdcTracking') {
       ScriptApp.deleteTrigger(triggers[i]);
     }
   }
-  ScriptApp.newTrigger('pollDtdcTracking_')
+  ScriptApp.newTrigger('pollDtdcTracking')
     .timeBased()
     .everyHours(1)
     .create();
