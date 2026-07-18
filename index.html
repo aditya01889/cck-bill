@@ -240,7 +240,13 @@
 
 <div id="tab-orders" class="tab-panel">
 <div class="wrap">
-  <div class="section-label" style="margin-top:24px;">Order History</div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-top:24px;margin-bottom:4px;">
+    <div class="section-label" style="margin-top:0;">Order History</div>
+    <div class="view-toggle" id="ordersViewToggle">
+      <button class="view-toggle-btn active" id="viewListBtn">List</button>
+      <button class="view-toggle-btn" id="viewCalendarBtn">Calendar</button>
+    </div>
+  </div>
 
   <div id="statusUpdatePanel" class="status-update-panel" style="display:none;">
     <div class="bill-ref">Updating: <span id="updateBillNoLabel"></span></div>
@@ -272,6 +278,7 @@
     </select>
     <div id="trackingLinkField" style="display:none;">
       <input type="url" id="trackingLinkInput" class="fulfillment-tracking-input" placeholder="Tracking link (optional)">
+      <div id="dtdcAwbDisplay" style="display:none;font-size:12px;color:var(--muted);padding:4px 0 0;">AWB: <span id="dtdcAwbValue" style="font-weight:700;font-family:monospace;letter-spacing:0.05em;"></span></div>
     </div>
     <div id="dispatchWorkflow"></div>
     <div class="status-update-actions" style="margin-top:10px;">
@@ -280,27 +287,30 @@
     </div>
   </div>
 
-  <div class="field">
-    <input type="search" id="orderSearch" placeholder="Search by name or bill number…" autocomplete="off">
-  </div>
-  <div class="orders-filters">
-    <div class="filter-row" id="paymentFilterRow">
-      <button class="filter-chip active" data-filter="payment" data-value="">All</button>
-      <button class="filter-chip" data-filter="payment" data-value="Pending">Pending</button>
-      <button class="filter-chip" data-filter="payment" data-value="Paid">Paid</button>
-      <button class="filter-chip" data-filter="payment" data-value="Refunded">Refunded</button>
-      <button class="filter-chip" data-filter="payment" data-value="Failed">Failed</button>
-      <button class="filter-chip" data-filter="payment" data-value="Cancelled">Cancelled</button>
+  <div id="ordersListControls">
+    <div class="field">
+      <input type="search" id="orderSearch" placeholder="Search by name or bill number…" autocomplete="off">
     </div>
-    <div class="filter-row" id="fulfillmentFilterRow">
-      <button class="filter-chip active" data-filter="fulfillment" data-value="">All</button>
-      <button class="filter-chip" data-filter="fulfillment" data-value="__none__">Not set</button>
-      <button class="filter-chip" data-filter="fulfillment" data-value="Packed">Packed</button>
-      <button class="filter-chip" data-filter="fulfillment" data-value="Booked">Booked</button>
-      <button class="filter-chip" data-filter="fulfillment" data-value="Picked Up">Picked Up</button>
-      <button class="filter-chip" data-filter="fulfillment" data-value="Delivered">Delivered</button>
+    <div class="orders-filters">
+      <div class="filter-row" id="paymentFilterRow">
+        <button class="filter-chip active" data-filter="payment" data-value="">All</button>
+        <button class="filter-chip" data-filter="payment" data-value="Pending">Pending</button>
+        <button class="filter-chip" data-filter="payment" data-value="Paid">Paid</button>
+        <button class="filter-chip" data-filter="payment" data-value="Refunded">Refunded</button>
+        <button class="filter-chip" data-filter="payment" data-value="Failed">Failed</button>
+        <button class="filter-chip" data-filter="payment" data-value="Cancelled">Cancelled</button>
+      </div>
+      <div class="filter-row" id="fulfillmentFilterRow">
+        <button class="filter-chip active" data-filter="fulfillment" data-value="">All</button>
+        <button class="filter-chip" data-filter="fulfillment" data-value="__none__">Not set</button>
+        <button class="filter-chip" data-filter="fulfillment" data-value="Packed">Packed</button>
+        <button class="filter-chip" data-filter="fulfillment" data-value="Booked">Booked</button>
+        <button class="filter-chip" data-filter="fulfillment" data-value="Picked Up">Picked Up</button>
+        <button class="filter-chip" data-filter="fulfillment" data-value="Delivered">Delivered</button>
+      </div>
     </div>
   </div>
+  <div id="ordersCalendarView" style="display:none;"></div>
   <div id="dispatchView"></div>
   <div id="ordersList"><div class="orders-loading">Loading orders…</div></div>
 </div>

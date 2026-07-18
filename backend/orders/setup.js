@@ -29,6 +29,36 @@ function setupDiscountColumn() {
   Logger.log('Discount column added at column ' + nextCol + ' (' + colLetter_(nextCol - 1) + ').');
 }
 
+// Adds the 'DTDC AWB' column header to the sheet if it doesn't already exist.
+// Run once from the Apps Script editor after deploying this feature.
+function setupDtdcAwbColumn() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  if (headers.indexOf('DTDC AWB') !== -1) {
+    Logger.log('DTDC AWB column already exists.');
+    return;
+  }
+  var nextCol = sheet.getLastColumn() + 1;
+  sheet.getRange(1, nextCol).setValue('DTDC AWB');
+  Logger.log('DTDC AWB column added at column ' + nextCol + ' (' + colLetter_(nextCol - 1) + ').');
+}
+
+// Creates an hourly time-driven trigger for pollDtdcTracking_().
+// Safe to run multiple times — deletes any existing trigger first.
+function setupDtdcTrigger() {
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'pollDtdcTracking_') {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+  ScriptApp.newTrigger('pollDtdcTracking_')
+    .timeBased()
+    .everyHours(1)
+    .create();
+  Logger.log('DTDC polling trigger created (hourly).');
+}
+
 // Adds a dropdown to the Fulfillment Status column (rows 2–1000).
 function setupFulfillmentDropdown() {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();

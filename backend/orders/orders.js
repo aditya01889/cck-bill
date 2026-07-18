@@ -206,7 +206,7 @@ function saveCatalog(data) {
   }
 }
 
-function updateFulfillment(billNo, fulfillmentStatus, trackingLink) {
+function updateFulfillment(billNo, fulfillmentStatus, trackingLink, dtdcAwb) {
   var valid = ['Packed', 'Booked', 'Picked Up', 'Delivered'];
   if (!billNo || valid.indexOf(fulfillmentStatus) === -1) {
     return jsonResponse({ status: 'error', message: 'Invalid bill number or fulfillment status' });
@@ -228,10 +228,96 @@ function updateFulfillment(billNo, fulfillmentStatus, trackingLink) {
 
     sheet.getRange(rowIndex, cm.fulfillmentStatus + 1).setValue(fulfillmentStatus);
     if (trackingLink) sheet.getRange(rowIndex, cm.trackingLink + 1).setValue(trackingLink);
+    if (dtdcAwb && cm.dtdcAwb != null) sheet.getRange(rowIndex, cm.dtdcAwb + 1).setValue(dtdcAwb);
     return jsonResponse({ status: 'success' });
   } catch (err) {
     return jsonResponse({ status: 'error', message: err.toString() });
   } finally {
     lock.releaseLock();
+  }
+}
+
+// Extracts the AWB number from a DTDC tracking URL query string.
+function extractDtdcAwbFromUrl_(url) {
+  try {
+    var qs = (url.split('?')[1] || '').split('#')[0];
+    var pairs = qs.split('&');
+    var map = {};
+    for (var i = 0; i < pairs.length; i++) {
+      var kv = pairs[i].split('=');
+      map[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1] || '');
+    }
+    return map['cnNo'] || map['awbno'] || map['awb'] || '';
+  } catch (e) {
+    return '';
+  }
+}
+
+// Fetches live DTDC tracking status for a given AWB.
+// Returns 'Picked Up', 'Delivered', or null (no change / unreachable).
+function fetchDtdcStatus_(awb) {
+  try {
+    var url = 'https://tracking.dtdc.com/ctbs-tracking/customerInterface.tr' +
+              '?submitFlag=showTrackingResults&cType=Consignment&cnNo=' + encodeURIComponent(awb);
+    var resp = UrlFetchApp.fetch(url, {
+      muteHttpExceptions: true,
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; CCK-Tracker/1.0)' },
+      followRedirects: true
+    });
+    if (resp.getResponseCode() !== 200) return null;
+    var body = resp.getContentText().toLowerCase();
+    if (body.indexOf('delivered') > -1) return 'Delivered';
+    if (body.indexOf('out for delivery') > -1 ||
+        body.indexOf('shipment out for delivery') > -1) return 'Picked Up';
+    if (body.indexOf('picked up') > -1 ||
+        body.indexOf('shipment collected') > -1 ||
+        body.indexOf('collected from sender') > -1) return 'Picked Up';
+    return null;
+  } catch (e) {
+    Logger.log('fetchDtdcStatus_ error for AWB ' + awb + ': ' + e.toString());
+    return null;
+  }
+}
+
+// Time-driven trigger: auto-advance fulfillment for DTDC orders.
+// Set up via setupDtdcTrigger() in setup.js; runs hourly.
+function pollDtdcTracking_() {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var lastRow = sheet.getLastRow();
+    if (lastRow <= 1) return;
+    var cm = buildColMap_(sheet, ORDER_COLS, ORDER_OPTIONAL_COLS);
+    if (cm.dtdcAwb == null) return;
+
+    var progression = ['Packed', 'Booked', 'Picked Up', 'Delivered'];
+    var data = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
+
+    for (var i = 0; i < data.length; i++) {
+      var r = data[i];
+      var fulfillment = String(r[cm.fulfillmentStatus] || '');
+      if (fulfillment === 'Delivered') continue;
+
+      var trackingLink = String(r[cm.trackingLink] || '');
+      if (trackingLink.toLowerCase().indexOf('dtdc') === -1) continue;
+
+      var awb = String(r[cm.dtdcAwb] || '').trim();
+      if (!awb) {
+        awb = extractDtdcAwbFromUrl_(trackingLink);
+        if (awb) sheet.getRange(i + 2, cm.dtdcAwb + 1).setValue(awb);
+      }
+      if (!awb) continue;
+
+      var newStatus = fetchDtdcStatus_(awb);
+      if (!newStatus) continue;
+
+      var curIdx = progression.indexOf(fulfillment);
+      var newIdx = progression.indexOf(newStatus);
+      if (newIdx > curIdx) {
+        sheet.getRange(i + 2, cm.fulfillmentStatus + 1).setValue(newStatus);
+        Logger.log('pollDtdcTracking_: ' + r[cm.billNo] + ' ' + fulfillment + ' → ' + newStatus);
+      }
+    }
+  } catch (err) {
+    Logger.log('pollDtdcTracking_ error: ' + err.toString());
   }
 }

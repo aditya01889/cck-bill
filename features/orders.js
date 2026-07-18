@@ -11,6 +11,20 @@ let _selectedBillNo = null;
 let _fulfillmentOrder = null;
 let _filterPayment = '';
 let _filterFulfillment = '';
+let _viewMode = 'list';
+let _calYear = new Date().getFullYear();
+let _calMonth = new Date().getMonth();
+let _calSelectedDay = null;
+
+/* ---- DTDC AWB helper ---- */
+
+function extractDtdcAwb(url) {
+  if (!url) return '';
+  try {
+    const u = new URL(url);
+    return u.searchParams.get('cnNo') || u.searchParams.get('awbno') || u.searchParams.get('awb') || '';
+  } catch { return ''; }
+}
 
 /* ---- Helpers ---- */
 
@@ -37,6 +51,141 @@ function applyFilters(orders, search) {
     result = result.filter(o => (o.fulfillmentStatus || '') === _filterFulfillment);
   }
   return result;
+}
+
+/* ---- Calendar view ---- */
+
+const CAL_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const CAL_DAYS = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+
+function toYMD(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function buildDispatchMap(orders) {
+  const map = {};
+  orders.forEach(o => {
+    const d = parseDispatchDate(o.dispatchDate);
+    if (!d) return;
+    const key = toYMD(d);
+    if (!map[key]) map[key] = [];
+    map[key].push(o);
+  });
+  return map;
+}
+
+function renderCalendar(orders) {
+  const el = document.getElementById('ordersCalendarView');
+  if (!el) return;
+  const dispatchMap = buildDispatchMap(orders);
+  const firstDay = new Date(_calYear, _calMonth, 1).getDay();
+  const daysInMonth = new Date(_calYear, _calMonth + 1, 0).getDate();
+  const todayKey = toYMD(new Date());
+
+  let cells = '';
+  for (let i = 0; i < firstDay; i++) cells += '<div class="cal-cell cal-empty"></div>';
+  for (let d = 1; d <= daysInMonth; d++) {
+    const key = _calYear + '-' + String(_calMonth + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+    const count = dispatchMap[key] ? dispatchMap[key].length : 0;
+    const cls = [
+      'cal-cell',
+      count ? 'has-orders' : '',
+      key === todayKey ? 'today' : '',
+      key === _calSelectedDay ? 'selected' : ''
+    ].filter(Boolean).join(' ');
+    cells += `<div class="${cls}" data-date="${key}">
+      <span class="cal-day-num">${d}</span>
+      ${count ? `<span class="cal-dot">${count > 1 ? count : ''}</span>` : ''}
+    </div>`;
+  }
+
+  el.innerHTML = `
+    <div class="cal-nav">
+      <button class="cal-nav-btn" id="calPrevBtn">&#8249;</button>
+      <div class="cal-title">${CAL_MONTHS[_calMonth]} ${_calYear}</div>
+      <button class="cal-nav-btn" id="calNextBtn">&#8250;</button>
+    </div>
+    <div class="cal-grid">
+      ${CAL_DAYS.map(d => `<div class="cal-header-cell">${d}</div>`).join('')}
+      ${cells}
+    </div>
+  `;
+
+  document.getElementById('calPrevBtn').addEventListener('click', () => {
+    _calMonth--;
+    if (_calMonth < 0) { _calMonth = 11; _calYear--; }
+    _calSelectedDay = null;
+    renderCalendar(ordersState.cache);
+    renderCalendarDayOrders(ordersState.cache, null);
+  });
+  document.getElementById('calNextBtn').addEventListener('click', () => {
+    _calMonth++;
+    if (_calMonth > 11) { _calMonth = 0; _calYear++; }
+    _calSelectedDay = null;
+    renderCalendar(ordersState.cache);
+    renderCalendarDayOrders(ordersState.cache, null);
+  });
+
+  el.querySelectorAll('.cal-cell[data-date]').forEach(cell => {
+    cell.addEventListener('click', () => {
+      _calSelectedDay = _calSelectedDay === cell.dataset.date ? null : cell.dataset.date;
+      renderCalendar(ordersState.cache);
+      renderCalendarDayOrders(ordersState.cache, _calSelectedDay);
+    });
+  });
+
+  renderCalendarDayOrders(orders, _calSelectedDay);
+}
+
+function renderCalendarDayOrders(orders, selectedDay) {
+  const el = document.getElementById('ordersList');
+  if (selectedDay) {
+    const filtered = orders.filter(o => {
+      const d = parseDispatchDate(o.dispatchDate);
+      return d && toYMD(d) === selectedDay;
+    });
+    if (!filtered.length) {
+      el.innerHTML = '<div class="orders-empty">No orders on this date.</div>';
+      return;
+    }
+    renderOrders(filtered);
+  } else {
+    const filtered = orders.filter(o => {
+      const d = parseDispatchDate(o.dispatchDate);
+      return d && d.getFullYear() === _calYear && d.getMonth() === _calMonth;
+    });
+    if (!filtered.length) {
+      el.innerHTML = '<div class="orders-empty">No orders with dispatch dates this month.</div>';
+      return;
+    }
+    renderOrders(filtered);
+  }
+}
+
+function setViewMode(mode) {
+  _viewMode = mode;
+  document.getElementById('viewListBtn').classList.toggle('active', mode === 'list');
+  document.getElementById('viewCalendarBtn').classList.toggle('active', mode === 'calendar');
+  const calEl = document.getElementById('ordersCalendarView');
+  const controlsEl = document.getElementById('ordersListControls');
+  const dispatchEl = document.getElementById('dispatchView');
+  if (mode === 'calendar') {
+    calEl.style.display = 'block';
+    controlsEl.style.display = 'none';
+    dispatchEl.style.display = 'none';
+    _calSelectedDay = null;
+    if (ordersState.cache.length) renderCalendar(ordersState.cache);
+    else document.getElementById('ordersList').innerHTML = '<div class="orders-loading">Loading…</div>';
+  } else {
+    calEl.style.display = 'none';
+    controlsEl.style.display = '';
+    dispatchEl.style.display = '';
+    _calSelectedDay = null;
+    if (ordersState.cache.length) {
+      renderDispatchView(ordersState.cache);
+      renderOrders(applyFilters(ordersState.cache, document.getElementById('orderSearch').value.trim()));
+    }
+  }
 }
 
 function renderDispatchView(orders) {
@@ -223,7 +372,16 @@ function openFulfillmentPanel(billNo) {
   document.getElementById('fulfillmentBillLabel').textContent = billNo;
   const sel = document.getElementById('fulfillmentSelect');
   sel.value = _fulfillmentOrder.fulfillmentStatus || 'Packed';
-  document.getElementById('trackingLinkInput').value = _fulfillmentOrder.trackingLink || '';
+  const existingLink = _fulfillmentOrder.trackingLink || '';
+  document.getElementById('trackingLinkInput').value = existingLink;
+  const existingAwb = extractDtdcAwb(existingLink);
+  const awbDisplay = document.getElementById('dtdcAwbDisplay');
+  if (existingAwb) {
+    document.getElementById('dtdcAwbValue').textContent = existingAwb;
+    awbDisplay.style.display = 'block';
+  } else {
+    awbDisplay.style.display = 'none';
+  }
   updateFulfillmentUI();
   document.getElementById('fulfillmentPanel').style.display = 'block';
   document.getElementById('fulfillmentPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -507,8 +665,12 @@ export async function loadOrders(search) {
     document.getElementById('ordersList').innerHTML = '<div class="orders-empty">Could not load orders. Check your connection.</div>';
     return;
   }
-  renderDispatchView(orders);
-  renderOrders(applyFilters(orders, search));
+  if (_viewMode === 'calendar') {
+    renderCalendar(orders);
+  } else {
+    renderDispatchView(orders);
+    renderOrders(applyFilters(orders, search));
+  }
 }
 
 /* ---- Wire event handlers (called once from main.js) ---- */
@@ -560,6 +722,9 @@ export function initOrders() {
     }
   });
 
+  document.getElementById('viewListBtn').addEventListener('click', () => setViewMode('list'));
+  document.getElementById('viewCalendarBtn').addEventListener('click', () => setViewMode('calendar'));
+
   document.getElementById('cancelFulfillmentBtn').addEventListener('click', () => {
     document.getElementById('fulfillmentPanel').style.display = 'none';
     document.getElementById('dispatchWorkflow').innerHTML = '';
@@ -568,15 +733,35 @@ export function initOrders() {
 
   document.getElementById('fulfillmentSelect').addEventListener('change', updateFulfillmentUI);
 
+  document.getElementById('trackingLinkInput').addEventListener('input', () => {
+    const val = document.getElementById('trackingLinkInput').value.trim();
+    const sel = document.getElementById('fulfillmentSelect');
+    // Auto-advance Packed → Booked when a tracking link is entered
+    if (val && sel.value === 'Packed') {
+      sel.value = 'Booked';
+      updateFulfillmentUI();
+    }
+    // Show extracted DTDC AWB if present in the link
+    const awb = extractDtdcAwb(val);
+    const awbDisplay = document.getElementById('dtdcAwbDisplay');
+    if (awb) {
+      document.getElementById('dtdcAwbValue').textContent = awb;
+      awbDisplay.style.display = 'block';
+    } else {
+      awbDisplay.style.display = 'none';
+    }
+  });
+
   document.getElementById('confirmFulfillmentBtn').addEventListener('click', async () => {
     if (!_fulfillmentOrder) return;
     const status = document.getElementById('fulfillmentSelect').value;
     const trackingLink = document.getElementById('trackingLinkInput').value.trim();
+    const dtdcAwb = extractDtdcAwb(trackingLink);
     const btn = document.getElementById('confirmFulfillmentBtn');
     btn.disabled = true;
     btn.textContent = 'Saving…';
     try {
-      const url = `${SHEET_WEBHOOK_URL}?action=updateFulfillment&billNo=${encodeURIComponent(_fulfillmentOrder.billNo)}&fulfillmentStatus=${encodeURIComponent(status)}&trackingLink=${encodeURIComponent(trackingLink)}`;
+      const url = `${SHEET_WEBHOOK_URL}?action=updateFulfillment&billNo=${encodeURIComponent(_fulfillmentOrder.billNo)}&fulfillmentStatus=${encodeURIComponent(status)}&trackingLink=${encodeURIComponent(trackingLink)}&dtdcAwb=${encodeURIComponent(dtdcAwb)}`;
       const res = await fetchWithTimeout(authUrl(url));
       const data = await res.json();
       if (data.status === 'success') {
