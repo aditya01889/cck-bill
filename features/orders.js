@@ -11,6 +11,66 @@ let _selectedBillNo = null;
 let _fulfillmentOrder = null;
 let _filterPayment = '';
 let _filterFulfillment = '';
+let _viewMode = 'list';
+let _calYear = new Date().getFullYear();
+let _calMonth = new Date().getMonth();
+let _calSelectedDay = null;
+let _scanStream = null;
+let _scanInterval = null;
+
+/* ---- DTDC AWB helper ---- */
+
+function extractDtdcAwb(url) {
+  if (!url) return '';
+  try {
+    const u = new URL(url);
+    return u.searchParams.get('cnNo') || u.searchParams.get('awbno') || u.searchParams.get('awb') || '';
+  } catch { return ''; }
+}
+
+/* ---- AWB barcode scanner ---- */
+
+function stopAwbScan() {
+  clearInterval(_scanInterval);
+  _scanInterval = null;
+  if (_scanStream) {
+    _scanStream.getTracks().forEach(t => t.stop());
+    _scanStream = null;
+  }
+  const modal = document.getElementById('awbScanModal');
+  const video = document.getElementById('awbScanVideo');
+  if (modal) modal.style.display = 'none';
+  if (video) video.srcObject = null;
+}
+
+function startAwbScan() {
+  if (!('BarcodeDetector' in window)) return;
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } })
+    .then(stream => {
+      _scanStream = stream;
+      const video = document.getElementById('awbScanVideo');
+      const modal = document.getElementById('awbScanModal');
+      const hint = document.getElementById('awbScanHint');
+      video.srcObject = stream;
+      modal.style.display = 'flex';
+      const detector = new BarcodeDetector({ formats: ['code_128', 'code_39', 'qr_code', 'data_matrix'] });
+      _scanInterval = setInterval(async () => {
+        if (!_scanStream || video.readyState < 2) return;
+        try {
+          const barcodes = await detector.detect(video);
+          if (barcodes.length) {
+            const raw = barcodes[0].rawValue;
+            stopAwbScan();
+            document.getElementById('dtdcAwbInput').value = raw;
+            if (hint) hint.textContent = 'Scanning…';
+          }
+        } catch (_) {}
+      }, 300);
+      // Auto-stop after 60 s
+      setTimeout(() => { if (_scanStream) stopAwbScan(); }, 60000);
+    })
+    .catch(err => alert('Camera access denied: ' + err.message));
+}
 
 /* ---- Helpers ---- */
 
@@ -37,6 +97,141 @@ function applyFilters(orders, search) {
     result = result.filter(o => (o.fulfillmentStatus || '') === _filterFulfillment);
   }
   return result;
+}
+
+/* ---- Calendar view ---- */
+
+const CAL_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const CAL_DAYS = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+
+function toYMD(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function buildDispatchMap(orders) {
+  const map = {};
+  orders.forEach(o => {
+    const d = parseDispatchDate(o.dispatchDate);
+    if (!d) return;
+    const key = toYMD(d);
+    if (!map[key]) map[key] = [];
+    map[key].push(o);
+  });
+  return map;
+}
+
+function renderCalendar(orders) {
+  const el = document.getElementById('ordersCalendarView');
+  if (!el) return;
+  const dispatchMap = buildDispatchMap(orders);
+  const firstDay = new Date(_calYear, _calMonth, 1).getDay();
+  const daysInMonth = new Date(_calYear, _calMonth + 1, 0).getDate();
+  const todayKey = toYMD(new Date());
+
+  let cells = '';
+  for (let i = 0; i < firstDay; i++) cells += '<div class="cal-cell cal-empty"></div>';
+  for (let d = 1; d <= daysInMonth; d++) {
+    const key = _calYear + '-' + String(_calMonth + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+    const count = dispatchMap[key] ? dispatchMap[key].length : 0;
+    const cls = [
+      'cal-cell',
+      count ? 'has-orders' : '',
+      key === todayKey ? 'today' : '',
+      key === _calSelectedDay ? 'selected' : ''
+    ].filter(Boolean).join(' ');
+    cells += `<div class="${cls}" data-date="${key}">
+      <span class="cal-day-num">${d}</span>
+      ${count ? `<span class="cal-dot">${count > 1 ? count : ''}</span>` : ''}
+    </div>`;
+  }
+
+  el.innerHTML = `
+    <div class="cal-nav">
+      <button class="cal-nav-btn" id="calPrevBtn">&#8249;</button>
+      <div class="cal-title">${CAL_MONTHS[_calMonth]} ${_calYear}</div>
+      <button class="cal-nav-btn" id="calNextBtn">&#8250;</button>
+    </div>
+    <div class="cal-grid">
+      ${CAL_DAYS.map(d => `<div class="cal-header-cell">${d}</div>`).join('')}
+      ${cells}
+    </div>
+  `;
+
+  document.getElementById('calPrevBtn').addEventListener('click', () => {
+    _calMonth--;
+    if (_calMonth < 0) { _calMonth = 11; _calYear--; }
+    _calSelectedDay = null;
+    renderCalendar(ordersState.cache);
+    renderCalendarDayOrders(ordersState.cache, null);
+  });
+  document.getElementById('calNextBtn').addEventListener('click', () => {
+    _calMonth++;
+    if (_calMonth > 11) { _calMonth = 0; _calYear++; }
+    _calSelectedDay = null;
+    renderCalendar(ordersState.cache);
+    renderCalendarDayOrders(ordersState.cache, null);
+  });
+
+  el.querySelectorAll('.cal-cell[data-date]').forEach(cell => {
+    cell.addEventListener('click', () => {
+      _calSelectedDay = _calSelectedDay === cell.dataset.date ? null : cell.dataset.date;
+      renderCalendar(ordersState.cache);
+      renderCalendarDayOrders(ordersState.cache, _calSelectedDay);
+    });
+  });
+
+  renderCalendarDayOrders(orders, _calSelectedDay);
+}
+
+function renderCalendarDayOrders(orders, selectedDay) {
+  const el = document.getElementById('ordersList');
+  if (selectedDay) {
+    const filtered = orders.filter(o => {
+      const d = parseDispatchDate(o.dispatchDate);
+      return d && toYMD(d) === selectedDay;
+    });
+    if (!filtered.length) {
+      el.innerHTML = '<div class="orders-empty">No orders on this date.</div>';
+      return;
+    }
+    renderOrders(filtered);
+  } else {
+    const filtered = orders.filter(o => {
+      const d = parseDispatchDate(o.dispatchDate);
+      return d && d.getFullYear() === _calYear && d.getMonth() === _calMonth;
+    });
+    if (!filtered.length) {
+      el.innerHTML = '<div class="orders-empty">No orders with dispatch dates this month.</div>';
+      return;
+    }
+    renderOrders(filtered);
+  }
+}
+
+function setViewMode(mode) {
+  _viewMode = mode;
+  document.getElementById('viewListBtn').classList.toggle('active', mode === 'list');
+  document.getElementById('viewCalendarBtn').classList.toggle('active', mode === 'calendar');
+  const calEl = document.getElementById('ordersCalendarView');
+  const controlsEl = document.getElementById('ordersListControls');
+  const dispatchEl = document.getElementById('dispatchView');
+  if (mode === 'calendar') {
+    calEl.style.display = 'block';
+    controlsEl.style.display = 'none';
+    dispatchEl.style.display = 'none';
+    _calSelectedDay = null;
+    if (ordersState.cache.length) renderCalendar(ordersState.cache);
+    else document.getElementById('ordersList').innerHTML = '<div class="orders-loading">Loading…</div>';
+  } else {
+    calEl.style.display = 'none';
+    controlsEl.style.display = '';
+    dispatchEl.style.display = '';
+    _calSelectedDay = null;
+    if (ordersState.cache.length) {
+      renderDispatchView(ordersState.cache);
+      renderOrders(applyFilters(ordersState.cache, document.getElementById('orderSearch').value.trim()));
+    }
+  }
 }
 
 function renderDispatchView(orders) {
@@ -204,6 +399,7 @@ function updateFulfillmentUI() {
   const status = document.getElementById('fulfillmentSelect').value;
   const showTracking = status === 'Booked' || status === 'Picked Up' || status === 'Delivered';
   document.getElementById('trackingLinkField').style.display = showTracking ? 'block' : 'none';
+  document.getElementById('awbField').style.display = showTracking ? 'block' : 'none';
   const workflow = document.getElementById('dispatchWorkflow');
   if (status !== 'Booked' || !_fulfillmentOrder) {
     workflow.innerHTML = '';
@@ -223,7 +419,10 @@ function openFulfillmentPanel(billNo) {
   document.getElementById('fulfillmentBillLabel').textContent = billNo;
   const sel = document.getElementById('fulfillmentSelect');
   sel.value = _fulfillmentOrder.fulfillmentStatus || 'Packed';
-  document.getElementById('trackingLinkInput').value = _fulfillmentOrder.trackingLink || '';
+  const existingLink = _fulfillmentOrder.trackingLink || '';
+  document.getElementById('trackingLinkInput').value = existingLink;
+  document.getElementById('dtdcAwbInput').value =
+    _fulfillmentOrder.dtdcAwb || extractDtdcAwb(existingLink);
   updateFulfillmentUI();
   document.getElementById('fulfillmentPanel').style.display = 'block';
   document.getElementById('fulfillmentPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -507,8 +706,12 @@ export async function loadOrders(search) {
     document.getElementById('ordersList').innerHTML = '<div class="orders-empty">Could not load orders. Check your connection.</div>';
     return;
   }
-  renderDispatchView(orders);
-  renderOrders(applyFilters(orders, search));
+  if (_viewMode === 'calendar') {
+    renderCalendar(orders);
+  } else {
+    renderDispatchView(orders);
+    renderOrders(applyFilters(orders, search));
+  }
 }
 
 /* ---- Wire event handlers (called once from main.js) ---- */
@@ -560,23 +763,51 @@ export function initOrders() {
     }
   });
 
+  document.getElementById('viewListBtn').addEventListener('click', () => setViewMode('list'));
+  document.getElementById('viewCalendarBtn').addEventListener('click', () => setViewMode('calendar'));
+
+  if ('BarcodeDetector' in window) {
+    const scanBtn = document.getElementById('awbScanBtn');
+    scanBtn.style.display = 'flex';
+    scanBtn.addEventListener('click', startAwbScan);
+  }
+  document.getElementById('awbScanCloseBtn').addEventListener('click', stopAwbScan);
+
   document.getElementById('cancelFulfillmentBtn').addEventListener('click', () => {
+    stopAwbScan();
     document.getElementById('fulfillmentPanel').style.display = 'none';
     document.getElementById('dispatchWorkflow').innerHTML = '';
+    document.getElementById('dtdcAwbInput').value = '';
     _fulfillmentOrder = null;
   });
 
   document.getElementById('fulfillmentSelect').addEventListener('change', updateFulfillmentUI);
 
+  document.getElementById('trackingLinkInput').addEventListener('input', () => {
+    const val = document.getElementById('trackingLinkInput').value.trim();
+    const sel = document.getElementById('fulfillmentSelect');
+    // Auto-advance Packed → Booked when a tracking link is entered
+    if (val && sel.value === 'Packed') {
+      sel.value = 'Booked';
+      updateFulfillmentUI();
+    }
+    // Auto-fill AWB input from tracking URL if field is currently empty
+    const awb = extractDtdcAwb(val);
+    if (awb && !document.getElementById('dtdcAwbInput').value) {
+      document.getElementById('dtdcAwbInput').value = awb;
+    }
+  });
+
   document.getElementById('confirmFulfillmentBtn').addEventListener('click', async () => {
     if (!_fulfillmentOrder) return;
     const status = document.getElementById('fulfillmentSelect').value;
     const trackingLink = document.getElementById('trackingLinkInput').value.trim();
+    const dtdcAwb = document.getElementById('dtdcAwbInput').value.trim() || extractDtdcAwb(trackingLink);
     const btn = document.getElementById('confirmFulfillmentBtn');
     btn.disabled = true;
     btn.textContent = 'Saving…';
     try {
-      const url = `${SHEET_WEBHOOK_URL}?action=updateFulfillment&billNo=${encodeURIComponent(_fulfillmentOrder.billNo)}&fulfillmentStatus=${encodeURIComponent(status)}&trackingLink=${encodeURIComponent(trackingLink)}`;
+      const url = `${SHEET_WEBHOOK_URL}?action=updateFulfillment&billNo=${encodeURIComponent(_fulfillmentOrder.billNo)}&fulfillmentStatus=${encodeURIComponent(status)}&trackingLink=${encodeURIComponent(trackingLink)}&dtdcAwb=${encodeURIComponent(dtdcAwb)}`;
       const res = await fetchWithTimeout(authUrl(url));
       const data = await res.json();
       if (data.status === 'success') {

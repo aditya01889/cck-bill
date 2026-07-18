@@ -121,7 +121,8 @@ function doGet(e) {
     return updateFulfillment(
       e.parameter.billNo || '',
       e.parameter.fulfillmentStatus || '',
-      e.parameter.trackingLink || ''
+      e.parameter.trackingLink || '',
+      e.parameter.dtdcAwb || ''
     );
   }
   if (action === 'customers') {
