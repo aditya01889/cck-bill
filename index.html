@@ -248,52 +248,6 @@
     </div>
   </div>
 
-  <div id="statusUpdatePanel" class="status-update-panel" style="display:none;">
-    <div class="bill-ref">Updating: <span id="updateBillNoLabel"></span></div>
-    <select class="status-select" id="statusSelect">
-      <option>Pending</option>
-      <option>Paid</option>
-      <option>Refunded</option>
-      <option>Failed</option>
-      <option>Cancelled</option>
-    </select>
-    <div id="proofSection" style="display:none;margin-bottom:12px;">
-      <label class="proof-upload-btn" for="proofFileInput">&#128247; Attach Payment Screenshot</label>
-      <input type="file" id="proofFileInput" accept="image/*" style="display:none;">
-      <div class="proof-file-name" id="proofFileName"></div>
-    </div>
-    <div class="status-update-actions">
-      <button class="btn btn-primary" id="confirmStatusBtn">Save</button>
-      <button class="btn btn-secondary" id="cancelStatusBtn">Cancel</button>
-    </div>
-  </div>
-
-  <div id="fulfillmentPanel" class="fulfillment-panel" style="display:none;">
-    <div class="bill-ref">Fulfillment: <span id="fulfillmentBillLabel"></span></div>
-    <select class="status-select" id="fulfillmentSelect">
-      <option value="Packed">Packed</option>
-      <option value="Booked">Booked</option>
-      <option value="Picked Up">Picked Up</option>
-      <option value="Delivered">Delivered</option>
-    </select>
-    <div id="trackingLinkField" style="display:none;">
-      <input type="url" id="trackingLinkInput" class="fulfillment-tracking-input" placeholder="Tracking link (optional)">
-    </div>
-    <div id="awbField" style="display:none;margin-top:8px;">
-      <div style="display:flex;align-items:center;gap:6px;">
-        <input type="text" id="dtdcAwbInput" class="fulfillment-tracking-input" placeholder="DTDC AWB number (optional)" style="flex:1;font-family:monospace;letter-spacing:0.04em;">
-        <button type="button" id="awbScanBtn" class="btn-scan-awb" style="display:none;" title="Scan AWB barcode">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="7" y2="12.01"/><line x1="12" y1="7" x2="12" y2="7.01"/><line x1="12" y1="17" x2="12" y2="17.01"/><line x1="17" y1="12" x2="17" y2="12.01"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
-        </button>
-      </div>
-    </div>
-    <div id="dispatchWorkflow"></div>
-    <div class="status-update-actions" style="margin-top:10px;">
-      <button class="btn btn-primary" id="confirmFulfillmentBtn">Save</button>
-      <button class="btn btn-secondary" id="cancelFulfillmentBtn">Cancel</button>
-    </div>
-  </div>
-
   <div id="ordersListControls">
     <div class="field">
       <input type="search" id="orderSearch" placeholder="Search by name or bill number…" autocomplete="off">
@@ -436,6 +390,64 @@
 <div id="tab-settings" class="tab-panel"></div>
 
 </div><!-- /#appContent -->
+
+<!-- STATUS UPDATE OVERLAY -->
+<div id="statusPanelOverlay" class="order-detail-overlay">
+  <div class="order-detail-sheet">
+    <div class="order-detail-header">
+      <div class="order-detail-title">Update Payment Status</div>
+      <button id="cancelStatusBtn" class="order-detail-close">&#x2715;</button>
+    </div>
+    <div class="bill-ref" style="margin-bottom:10px;">Bill: <span id="updateBillNoLabel"></span></div>
+    <select class="status-select" id="statusSelect">
+      <option>Pending</option>
+      <option>Paid</option>
+      <option>Refunded</option>
+      <option>Failed</option>
+      <option>Cancelled</option>
+    </select>
+    <div id="proofSection" style="display:none;margin-bottom:12px;">
+      <label class="proof-upload-btn" for="proofFileInput">&#128247; Attach Payment Screenshot</label>
+      <input type="file" id="proofFileInput" accept="image/*" style="display:none;">
+      <div class="proof-file-name" id="proofFileName"></div>
+    </div>
+    <div class="status-update-actions">
+      <button class="btn btn-primary" id="confirmStatusBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- FULFILLMENT PANEL OVERLAY -->
+<div id="fulfillmentPanelOverlay" class="order-detail-overlay">
+  <div class="order-detail-sheet">
+    <div class="order-detail-header">
+      <div class="order-detail-title">Update Fulfillment</div>
+      <button id="cancelFulfillmentBtn" class="order-detail-close">&#x2715;</button>
+    </div>
+    <div class="bill-ref" style="margin-bottom:10px;">Bill: <span id="fulfillmentBillLabel"></span></div>
+    <select class="status-select" id="fulfillmentSelect">
+      <option value="Packed">Packed</option>
+      <option value="Booked">Booked</option>
+      <option value="Picked Up">Picked Up</option>
+      <option value="Delivered">Delivered</option>
+    </select>
+    <div id="trackingLinkField" style="display:none;">
+      <input type="url" id="trackingLinkInput" class="fulfillment-tracking-input" placeholder="Tracking link (optional)">
+    </div>
+    <div id="awbField" style="display:none;margin-top:8px;">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <input type="text" id="dtdcAwbInput" class="fulfillment-tracking-input" placeholder="DTDC AWB number (optional)" style="flex:1;font-family:monospace;letter-spacing:0.04em;">
+        <button type="button" id="awbScanBtn" class="btn-scan-awb" style="display:none;" title="Scan AWB barcode">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="7" y2="12.01"/><line x1="12" y1="7" x2="12" y2="7.01"/><line x1="12" y1="17" x2="12" y2="17.01"/><line x1="17" y1="12" x2="17" y2="12.01"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="dispatchWorkflow"></div>
+    <div class="status-update-actions" style="margin-top:10px;">
+      <button class="btn btn-primary" id="confirmFulfillmentBtn">Save</button>
+    </div>
+  </div>
+</div>
 
 <!-- ORDER DETAIL OVERLAY -->
 <div id="orderDetailOverlay" class="order-detail-overlay">
