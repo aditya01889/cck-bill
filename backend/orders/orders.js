@@ -307,12 +307,14 @@ function pollDtdcTracking() {
       var fulfillment = String(r[cm.fulfillmentStatus] || '');
       if (fulfillment === 'Delivered') continue;
 
-      var trackingLink = String(r[cm.trackingLink] || '');
-      if (trackingLink.toLowerCase().indexOf('dtdc') === -1) continue;
-
-      Logger.log('pollDtdcTracking: row ' + (i + 2) + ' bill=' + r[cm.billNo] + ' fulfillment=' + fulfillment + ' trackingLink=' + trackingLink);
-
       var awb = String(r[cm.dtdcAwb] || '').trim();
+      var trackingLink = String(r[cm.trackingLink] || '');
+
+      // Process rows that have an AWB directly, OR a DTDC tracking link to extract AWB from
+      if (!awb && trackingLink.toLowerCase().indexOf('dtdc') === -1) continue;
+
+      Logger.log('pollDtdcTracking: row ' + (i + 2) + ' bill=' + r[cm.billNo] + ' fulfillment=' + fulfillment + ' awb=' + awb + ' trackingLink=' + trackingLink);
+
       if (!awb) {
         awb = extractDtdcAwbFromUrl_(trackingLink);
         Logger.log('pollDtdcTracking: extracted AWB from URL: "' + awb + '"');
