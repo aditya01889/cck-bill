@@ -288,14 +288,19 @@ function fetchDtdcStatus_(awb) {
 // NOTE: must NOT end with _ so it appears in the Apps Script trigger UI.
 function pollDtdcTracking() {
   try {
+    Logger.log('pollDtdcTracking: started');
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     var lastRow = sheet.getLastRow();
-    if (lastRow <= 1) return;
+    Logger.log('pollDtdcTracking: lastRow=' + lastRow);
+    if (lastRow <= 1) { Logger.log('pollDtdcTracking: exit - no data'); return; }
+
     var cm = buildColMap_(sheet, ORDER_COLS, ORDER_OPTIONAL_COLS);
-    if (cm.dtdcAwb == null) return;
+    Logger.log('pollDtdcTracking: dtdcAwb col=' + cm.dtdcAwb + ' fulfillmentStatus col=' + cm.fulfillmentStatus + ' trackingLink col=' + cm.trackingLink);
+    if (cm.dtdcAwb == null) { Logger.log('pollDtdcTracking: exit - DTDC AWB column missing from sheet'); return; }
 
     var progression = ['Packed', 'Booked', 'Picked Up', 'Delivered'];
     var data = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
+    Logger.log('pollDtdcTracking: scanning ' + data.length + ' rows');
 
     for (var i = 0; i < data.length; i++) {
       var r = data[i];
@@ -305,24 +310,31 @@ function pollDtdcTracking() {
       var trackingLink = String(r[cm.trackingLink] || '');
       if (trackingLink.toLowerCase().indexOf('dtdc') === -1) continue;
 
+      Logger.log('pollDtdcTracking: row ' + (i + 2) + ' bill=' + r[cm.billNo] + ' fulfillment=' + fulfillment + ' trackingLink=' + trackingLink);
+
       var awb = String(r[cm.dtdcAwb] || '').trim();
       if (!awb) {
         awb = extractDtdcAwbFromUrl_(trackingLink);
+        Logger.log('pollDtdcTracking: extracted AWB from URL: "' + awb + '"');
         if (awb) sheet.getRange(i + 2, cm.dtdcAwb + 1).setValue(awb);
+      } else {
+        Logger.log('pollDtdcTracking: AWB from sheet: "' + awb + '"');
       }
-      if (!awb) continue;
+      if (!awb) { Logger.log('pollDtdcTracking: skip row ' + (i + 2) + ' - no AWB'); continue; }
 
       var newStatus = fetchDtdcStatus_(awb);
+      Logger.log('pollDtdcTracking: fetchDtdcStatus_ returned: ' + newStatus);
       if (!newStatus) continue;
 
       var curIdx = progression.indexOf(fulfillment);
       var newIdx = progression.indexOf(newStatus);
       if (newIdx > curIdx) {
         sheet.getRange(i + 2, cm.fulfillmentStatus + 1).setValue(newStatus);
-        Logger.log('pollDtdcTracking_: ' + r[cm.billNo] + ' ' + fulfillment + ' → ' + newStatus);
+        Logger.log('pollDtdcTracking: updated bill=' + r[cm.billNo] + ' ' + fulfillment + ' → ' + newStatus);
       }
     }
+    Logger.log('pollDtdcTracking: done');
   } catch (err) {
-    Logger.log('pollDtdcTracking_ error: ' + err.toString());
+    Logger.log('pollDtdcTracking error: ' + err.toString());
   }
 }
