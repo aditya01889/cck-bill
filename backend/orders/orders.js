@@ -260,7 +260,7 @@ function extractDtdcAwbFromUrl_(url) {
 // reliable than scraping the HTML tracking page.
 function fetchDtdcStatus_(awb) {
   try {
-    var url = 'http://track.dtdc.com/ctbs-tracking/customerInterface.tr' +
+    var url = 'https://tracking.dtdc.com/ctbs-tracking/customerInterface.tr' +
               '?submitName=getLoadMovementDetails&cnNo=' + encodeURIComponent(awb);
     var resp = UrlFetchApp.fetch(url, {
       muteHttpExceptions: true,
