@@ -255,10 +255,13 @@ function extractDtdcAwbFromUrl_(url) {
 
 // Fetches live DTDC tracking status for a given AWB.
 // Returns 'Picked Up', 'Delivered', or null (no change / unreachable).
+// Uses the JSON API endpoint (submitName=getLoadMovementDetails) which returns
+// an array of events with deliveryStatus/activityType fields — faster and more
+// reliable than scraping the HTML tracking page.
 function fetchDtdcStatus_(awb) {
   try {
-    var url = 'https://tracking.dtdc.com/ctbs-tracking/customerInterface.tr' +
-              '?submitFlag=showTrackingResults&cType=Consignment&cnNo=' + encodeURIComponent(awb);
+    var url = 'http://track.dtdc.com/ctbs-tracking/customerInterface.tr' +
+              '?submitName=getLoadMovementDetails&cnNo=' + encodeURIComponent(awb);
     var resp = UrlFetchApp.fetch(url, {
       muteHttpExceptions: true,
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; CCK-Tracker/1.0)' },
@@ -266,9 +269,31 @@ function fetchDtdcStatus_(awb) {
     });
     var code = resp.getResponseCode();
     var body = resp.getContentText();
-    // Log snippet for debugging — check Apps Script Executions to verify response
-    Logger.log('fetchDtdcStatus_ AWB=' + awb + ' HTTP=' + code + ' bodySnippet=' + body.substring(0, 1000));
+    Logger.log('fetchDtdcStatus_ AWB=' + awb + ' HTTP=' + code + ' bodySnippet=' + body.substring(0, 500));
     if (code !== 200) return null;
+
+    // JSON API: array of tracking events, latest is last element
+    try {
+      var events = JSON.parse(body);
+      if (Array.isArray(events) && events.length > 0) {
+        var latest = events[events.length - 1];
+        var deliveryStatus = String(latest.deliveryStatus || '');
+        var activityType   = String(latest.activityType   || '');
+        Logger.log('fetchDtdcStatus_ latest deliveryStatus="' + deliveryStatus + '" activityType="' + activityType + '"');
+        var combined = (deliveryStatus + ' ' + activityType).toLowerCase();
+        if (combined.indexOf('delivered') > -1) return 'Delivered';
+        if (combined.indexOf('out for delivery') > -1) return 'Picked Up';
+        if (combined.indexOf('picked up') > -1 ||
+            combined.indexOf('shipment collected') > -1 ||
+            combined.indexOf('collected from sender') > -1) return 'Picked Up';
+        return null;
+      }
+    } catch (jsonErr) {
+      // Response was not JSON — fall through to keyword scan on body
+      Logger.log('fetchDtdcStatus_ JSON parse failed (' + jsonErr + '), falling back to keyword scan');
+    }
+
+    // Fallback: keyword scan on HTML body
     var lower = body.toLowerCase();
     if (lower.indexOf('delivered') > -1) return 'Delivered';
     if (lower.indexOf('out for delivery') > -1 ||
