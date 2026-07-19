@@ -652,17 +652,13 @@
     font-size:13px;font-weight:600;padding:32px 0;
   }
 
-  /* ---- Status update panel ---- */
-  .status-update-panel{
-    background:var(--paper);border:1.5px solid var(--rust);
-    border-radius:10px;padding:16px;margin-bottom:16px;
-  }
-  .status-update-panel .bill-ref{
+  /* ---- Status / fulfillment panel shared ---- */
+  .bill-ref{
     font-family:'Quicksand',sans-serif;font-size:11px;
     letter-spacing:0.1em;text-transform:uppercase;
-    color:var(--muted);font-weight:700;margin-bottom:10px;
+    color:var(--muted);font-weight:700;
   }
-  .status-update-panel .bill-ref span{color:var(--ink);font-size:13px;letter-spacing:0;}
+  .bill-ref span{color:var(--ink);font-size:13px;letter-spacing:0;}
   .status-select{
     width:100%;border:1px solid var(--line);background:var(--paper);
     border-radius:6px;padding:11px 12px;font-size:15px;
@@ -686,17 +682,6 @@
   .fulfillment-badge.dispatched{background:#EEF3FF;color:#3A5BC7;border-color:#B8C8F0;}
   .fulfillment-badge.delivered{background:#E8F5EE;color:#3D7A4D;border-color:#B8DEC7;}
 
-  /* ---- Fulfillment update panel ---- */
-  .fulfillment-panel{
-    background:var(--paper);border:1.5px solid #5B7FD4;
-    border-radius:10px;padding:16px;margin-bottom:16px;
-  }
-  .fulfillment-panel .bill-ref{
-    font-family:'Quicksand',sans-serif;font-size:11px;
-    letter-spacing:0.1em;text-transform:uppercase;
-    color:var(--muted);font-weight:700;margin-bottom:10px;
-  }
-  .fulfillment-panel .bill-ref span{color:var(--ink);font-size:13px;letter-spacing:0;}
 
   /* ---- Dispatch workflow ---- */
   .dispatch-box{background:var(--cream);border-radius:8px;padding:14px;margin-top:12px;}
