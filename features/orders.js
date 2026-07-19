@@ -400,6 +400,22 @@ function updateFulfillmentUI() {
   const showTracking = status === 'Booked' || status === 'Picked Up' || status === 'Delivered';
   document.getElementById('trackingLinkField').style.display = showTracking ? 'block' : 'none';
   document.getElementById('awbField').style.display = showTracking ? 'block' : 'none';
+
+  const awb = (document.getElementById('dtdcAwbInput').value || '').trim();
+  let dtdcNote = document.getElementById('dtdcAutoNote');
+  if (awb) {
+    if (!dtdcNote) {
+      dtdcNote = document.createElement('div');
+      dtdcNote.id = 'dtdcAutoNote';
+      dtdcNote.style.cssText = 'font-size:12px;color:var(--muted);background:var(--cream);border-radius:6px;padding:7px 10px;margin-top:8px;';
+      dtdcNote.textContent = 'Picked Up & Delivered will auto-update hourly via DTDC tracking. Manual override is still possible.';
+      document.getElementById('awbField').after(dtdcNote);
+    }
+    dtdcNote.style.display = showTracking ? 'block' : 'none';
+  } else if (dtdcNote) {
+    dtdcNote.style.display = 'none';
+  }
+
   const workflow = document.getElementById('dispatchWorkflow');
   if (status !== 'Booked' || !_fulfillmentOrder) {
     workflow.innerHTML = '';
@@ -424,8 +440,7 @@ function openFulfillmentPanel(billNo) {
   document.getElementById('dtdcAwbInput').value =
     _fulfillmentOrder.dtdcAwb || extractDtdcAwb(existingLink);
   updateFulfillmentUI();
-  document.getElementById('fulfillmentPanel').style.display = 'block';
-  document.getElementById('fulfillmentPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  openOverlay(document.getElementById('fulfillmentPanelOverlay'));
 }
 
 /* ---- Order list rendering ---- */
@@ -576,8 +591,7 @@ export function openStatusPanel(billNo, currentStatus) {
   document.getElementById('proofFileInput').value = '';
   document.getElementById('proofFileName').textContent = '';
   _toggleProofSection(sel.value);
-  document.getElementById('statusUpdatePanel').style.display = 'block';
-  document.getElementById('statusUpdatePanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  openOverlay(document.getElementById('statusPanelOverlay'));
 }
 
 function _toggleProofSection(status) {
@@ -727,7 +741,7 @@ export function initOrders() {
   });
 
   document.getElementById('cancelStatusBtn').addEventListener('click', () => {
-    document.getElementById('statusUpdatePanel').style.display = 'none';
+    closeOverlay(document.getElementById('statusPanelOverlay'));
     document.getElementById('proofFileInput').value = '';
     document.getElementById('proofFileName').textContent = '';
     _selectedBillNo = null;
@@ -746,7 +760,7 @@ export function initOrders() {
       const data = await res.json();
       if (data.status === 'success') {
         if (proofFile) uploadPaymentProof(_selectedBillNo, proofFile);
-        document.getElementById('statusUpdatePanel').style.display = 'none';
+        closeOverlay(document.getElementById('statusPanelOverlay'));
         document.getElementById('proofFileInput').value = '';
         document.getElementById('proofFileName').textContent = '';
         _selectedBillNo = null;
@@ -775,13 +789,14 @@ export function initOrders() {
 
   document.getElementById('cancelFulfillmentBtn').addEventListener('click', () => {
     stopAwbScan();
-    document.getElementById('fulfillmentPanel').style.display = 'none';
+    closeOverlay(document.getElementById('fulfillmentPanelOverlay'));
     document.getElementById('dispatchWorkflow').innerHTML = '';
     document.getElementById('dtdcAwbInput').value = '';
     _fulfillmentOrder = null;
   });
 
   document.getElementById('fulfillmentSelect').addEventListener('change', updateFulfillmentUI);
+  document.getElementById('dtdcAwbInput').addEventListener('input', updateFulfillmentUI);
 
   document.getElementById('trackingLinkInput').addEventListener('input', () => {
     const val = document.getElementById('trackingLinkInput').value.trim();
@@ -811,7 +826,7 @@ export function initOrders() {
       const res = await fetchWithTimeout(authUrl(url));
       const data = await res.json();
       if (data.status === 'success') {
-        document.getElementById('fulfillmentPanel').style.display = 'none';
+        closeOverlay(document.getElementById('fulfillmentPanelOverlay'));
         document.getElementById('dispatchWorkflow').innerHTML = '';
         _fulfillmentOrder = null;
         invalidateOrders();
