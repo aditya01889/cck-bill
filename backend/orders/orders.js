@@ -264,14 +264,18 @@ function fetchDtdcStatus_(awb) {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; CCK-Tracker/1.0)' },
       followRedirects: true
     });
-    if (resp.getResponseCode() !== 200) return null;
-    var body = resp.getContentText().toLowerCase();
-    if (body.indexOf('delivered') > -1) return 'Delivered';
-    if (body.indexOf('out for delivery') > -1 ||
-        body.indexOf('shipment out for delivery') > -1) return 'Picked Up';
-    if (body.indexOf('picked up') > -1 ||
-        body.indexOf('shipment collected') > -1 ||
-        body.indexOf('collected from sender') > -1) return 'Picked Up';
+    var code = resp.getResponseCode();
+    var body = resp.getContentText();
+    // Log snippet for debugging — check Apps Script Executions to verify response
+    Logger.log('fetchDtdcStatus_ AWB=' + awb + ' HTTP=' + code + ' bodySnippet=' + body.substring(0, 1000));
+    if (code !== 200) return null;
+    var lower = body.toLowerCase();
+    if (lower.indexOf('delivered') > -1) return 'Delivered';
+    if (lower.indexOf('out for delivery') > -1 ||
+        lower.indexOf('shipment out for delivery') > -1) return 'Picked Up';
+    if (lower.indexOf('picked up') > -1 ||
+        lower.indexOf('shipment collected') > -1 ||
+        lower.indexOf('collected from sender') > -1) return 'Picked Up';
     return null;
   } catch (e) {
     Logger.log('fetchDtdcStatus_ error for AWB ' + awb + ': ' + e.toString());
